@@ -422,10 +422,15 @@ function cloudPull(silent){
     if(!res.ok) return res.text().then(function(t){ throw new Error(t); });
     return res.json();
   }).then(function(data){
+    // 云端没数据
     if(!data || data.length === 0){
-      if(state && state.enabled){ cloudPush(true); }
-      setSyncStatus('ok', '云端暂无数据，已上传本机数据');
-      return { pulled: false };
+      if(state && state.enabled){
+        cloudPush(true);
+        setSyncStatus('ok', '云端暂无数据，已上传本机数据');
+      } else {
+        setSyncStatus('idle', '云端暂无数据 · 这是一个全新的同步码');
+      }
+      return { pulled: false, empty: true };
     }
     const row = data[0];
     const cloudTime = new Date(row.updated_at).getTime();
@@ -615,7 +620,7 @@ function judgeWake(time){
   return{fitness:false,msg:'超过5:20，健身变灰'};
 }
 
-/* ========== 启用页 ========== */
+/* ========== 启用页（含生日输入） ========== */
 function showActivationScreen(){
   let el=document.getElementById('activationScreen');if(el)el.remove();
   el=document.createElement('div');el.id='activationScreen';el.className='activation-screen';
@@ -638,6 +643,8 @@ function showActivationScreen(){
       <div class="lbl">起始日期</div>
       <div class="val">${today}</div>
     </div>
+    <label class="fl" style="font-size:12.5px;color:var(--muted);margin-bottom:6px;display:block;">你的生日（可选，用于生日卡功能）</label>
+    <input class="txt" type="date" id="actBirthday" style="margin-bottom:16px;">
     <label class="activation-check">
       <input type="checkbox" id="actAgree">
       <span class="lbl">我已了解以上规则，确认<b>一次性启用</b>自律花园，并接受不可停止的约束。</span>
@@ -651,11 +658,15 @@ function showActivationScreen(){
     pushUndo('启用系统');
     state.enabled=true;
     state.settings.startDate=todayStr();
+    const bd = el.querySelector('#actBirthday').value;
+    if(bd) state.settings.birthday = bd;
     state.createdAt=new Date().toISOString();
     saveState();
     el.remove();
     autoCheckWakeFail();
     render(false);
+    // 启用后立即上传一次
+    setTimeout(function(){ cloudPush(true); }, 500);
     toast('🌱 系统已启用，愿你不负这段旅程');
   };
 }
@@ -1353,8 +1364,8 @@ function viewMe(){
     <div class="hint" style="margin-top:10px;line-height:1.7;">
       · 每次打卡 / 记录后 2 秒自动上传<br>
       · 换设备时输入同一个同步码即可恢复<br>
-      · 同步码丢失将无法找回云端数据，请务必备份<br>
-      · 每次打开请用同一个正式网址访问
+      · 如果输入的同步码在云端没有数据 → 会重置本机，重新走一遍启用流程<br>
+      · 同步码丢失将无法找回云端数据，请务必备份
     </div>
   </div>
   <div class="card"><div class="card-t"><h3>初始设置</h3><span class="sub">本月可修改 ${Math.max(0,state.settings.editLimitPerMonth-editsThisMonth)} 次</span></div>
@@ -1666,13 +1677,35 @@ document.addEventListener('click',e=>{
     if(!input || !input.value.trim()){ toast('请输入同步码'); return; }
     const newId = input.value.trim();
     if(newId === syncUserId){ toast('这与当前同步码相同'); return; }
-    if(!confirm('即将用同步码 ' + newId + ' 的数据覆盖本机，确定继续？')) return;
+    if(!confirm('即将切换到同步码：\n' + newId + '\n\n· 如果云端有这个同步码的数据 → 会覆盖本机\n· 如果云端没有数据 → 本机会被重置，重新走一遍启用流程\n\n确定继续吗？')) return;
+    
+    // 先保存到 local 变量
+    const oldSyncId = syncUserId;
     syncUserId = newId;
     localStorage.setItem(SYNC_ID_KEY, syncUserId);
+    
+    // 重置本机状态（避免旧数据污染新同步空间）
+    suppressSync = true;
+    state = defaultState();
+    try{ localStorage.removeItem(LS_STATE); }catch(e){}
+    try{ localStorage.removeItem(LAST_CHANGE_KEY); }catch(e){}
+    lastLocalChange = 0;
+    suppressSync = false;
+    
+    // 立即渲染（会显示启用页，因为 state.enabled = false）
     render(false);
-    cloudPull(false).then(function(res){
-      if(res.pulled) toast('已恢复数据');
-      else toast('已切换同步码');
+    
+    // 尝试从云端拉取
+    cloudPull(true).then(function(res){
+      if(res.pulled){
+        toast('已从云端恢复数据 ✅');
+        render(false);
+      } else if(res.empty){
+        toast('新同步码已就绪，请重新启用系统 🌱');
+      } else {
+        // 可能网络失败
+        toast('云端无数据或连接失败，可稍后在「我的」页面点「立即下载」重试');
+      }
       render(false);
     });
     return;
@@ -1681,6 +1714,7 @@ document.addEventListener('click',e=>{
   if(act==='cloudPullBtn'){
     cloudPull(false).then(function(res){
       if(res.pulled) toast('已从云端恢复');
+      else if(res.empty) toast('云端暂无数据');
       else toast('本机与云端一致');
       render(false);
     });
@@ -1869,7 +1903,6 @@ function migrate(){
   autoCheckWakeFail();
   render(false);
 
-  // 启动云同步
   booted = true;
   setTimeout(function(){
     cloudPull(false).then(function(res){
