@@ -2933,6 +2933,87 @@ computeSchedule = function(){
     }
   };
 })();
+  /* ========== v7：日历可往后翻 + 手动休息日跟随周期 ========== */
+(function(){
+  var _origMigrateV7 = migrate;
+  migrate = function(){
+    _origMigrateV7();
+    if(!state.settings.manualRestPlan && state.settings.startDate){
+      state.settings.manualRestPlan = { date: '2026-10-09' };
+      try{ saveState(true); }catch(e){}
+    }
+  };
+})();
+
+var _origCSV7 = computeSchedule;
+computeSchedule = function(){
+  var result = _origCSV7();
+  var plan = state.settings.manualRestPlan;
+  if(!plan || !plan.date || !state.settings.startDate) return result;
+  var targetDay = diffDays(parseD(state.settings.startDate), parseD(plan.date)) + 1;
+  for(var k in result){
+    if(result[k].type === 'green' && result[k].cycleDay === targetDay){
+      result[k] = Object.assign({}, result[k], {
+        isRest: true,
+        isManualRest: true,
+        isRestConfirmed: true,
+        type: 'rest'
+      });
+      break;
+    }
+  }
+  return result;
+};
+
+function viewCalendar(){
+  if(!calCursor){const d=parseD(todayStr());calCursor={y:d.getFullYear(),m:d.getMonth()}}
+  const{y,m}=calCursor;
+  const first=new Date(y,m,1);const startDay=first.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const today=todayStr();const sch=computeSchedule();
+  let html='';
+  for(let i=0;i<startDay;i++)html+='<div class="cal-day empty"></div>';
+  for(let day=1;day<=daysInMonth;day++){
+    const key=`${y}-${pad2(m+1)}-${pad2(day)}`;
+    const info=sch[key]||{};const rec=state.records[key];
+    const isFuture=key>today;
+    const cls=['cal-day'];
+    if(key===today)cls.push('today');
+    if(isFuture)cls.push('future');
+    if(info.isBirthday)cls.push('birthday');
+    if(info.isRest)cls.push('rest');
+    if(info.isRestCandidate)cls.push('rest-candidate');
+    if(info.type==='cooldown'||info.type==='future-cooldown')cls.push('cool');
+    else if(info.isReward)cls.push('reward');
+    else if(info.isMealDay)cls.push('meal');
+    else if(info.type==='green')cls.push('green');
+    else if(info.type==='partial')cls.push('partial');
+    if(info.isJJRelease)cls.push('jj-release');
+    const dots=[
+      rec&&rec.sleep&&rec.sleep.success?'on sleep':'',
+      rec&&rec.study&&rec.study.tier&&rec.study.tier!=='conservative'?'on study':'',
+      rec&&rec.jingji&&rec.jingji.ok?'on jj':'',
+      rec&&rec.wake&&rec.wake.fitness?'on wake':''
+    ].filter(Boolean).map(c=>`<i class="dot ${c}"></i>`).join('');
+    html+=`<div class="${cls.join(' ')}" data-date="${key}" ${isFuture?'data-future="1"':''}><span class="cal-num">${day}</span><span class="cal-dots">${dots}</span></div>`;
+  }
+  const todayInfo=sch[today]||{};
+  const canSmall=todayInfo.isReward===true;const canBig=todayInfo.isRest===true;
+  return `
+  <div class="card">
+    <div class="cal-head"><button data-act="calPrev">‹</button><div class="cal-title">${y}年${m+1}月</div><button data-act="calNext">›</button></div>
+    <div class="cal-week">${['日','一','二','三','四','五','六'].map(d=>`<span>${d}</span>`).join('')}</div>
+    <div class="cal-grid">${html}</div>
+  </div>
+  <div class="card"><div class="card-t"><h3>图例</h3></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted)">
+      <span>🟢 全绿</span><span>🟡 部分</span><span>❄ 冷静（冰冻）</span>
+      <span>◆ 减脂餐日</span><span>★ 奖励日</span><span>💧 释放日</span>
+      <span>🎂 生日</span><span>🏖 休息日</span><span>? 候选</span>
+    </div>
+    <div class="hint" style="margin-top:8px;">可往后翻查看未来排程。冷静期会显示冰冻标记。</div>
+  </div>`;
+}
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
