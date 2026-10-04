@@ -1693,31 +1693,30 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
 async function initCloud() {
-  // 1. 匿名登录（无需注册，自动生成唯一ID）
-  const { data: { user } } = await supabase.auth.getUser();
-  currentUser = user;
-  if (!currentUser) {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) { toast('云端连接失败，请检查网络'); return; }
-    currentUser = data.user;
-  }
-  
-  // 2. 从云端加载数据
-  await loadFromCloud();
-}
-async function loadFromCloud() {
-  if (!currentUser) return;
-  const { data, error } = await supabase.from('garden_data').select('data').eq('user_id', currentUser.id).maybeSingle();
-  if (error) { console.error('加载失败:', error); return; }
-  
-  if (data && data.data) {
-    state = Object.assign(defaultState(), data.data);
+  try {
+    // 1. 检查 Supabase 库是否加载成功
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('Supabase 库未能加载，请检查网络');
+    }
+    // 2. 匿名登录
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUser = user;
+    if (!currentUser) {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      currentUser = data.user;
+    }
+    // 3. 加载云端数据
+    await loadFromCloud();
+  } catch (err) {
+    console.error('云端初始化失败:', err);
+    // 4. 即使云端失败，也要显示本地界面，绝不白屏
+    const raw = localStorage.getItem(LS_STATE);
+    if (raw) { state = JSON.parse(raw); } else { state = defaultState(); }
     migrate();
-    saveState(true); 
-  } else {
-    state = defaultState();
+    render(false);
+    toast('云端连接失败，当前使用本地数据');
   }
-  render(false);
 }
 
 async function saveState(silent) {
