@@ -2678,6 +2678,53 @@ function render(preserve){
     setTimeout(()=>playUnlockSequence(), 400);
   }
 }
+  /* ========== 修复日历排版（强制刷样式） ========== */
+(function(){
+  var css = ''
+  +'.cal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin-bottom:10px!important;width:100%!important}'
+  +'.cal-head button{width:32px!important;height:32px!important;border-radius:8px!important;border:1px solid #244a30!important;background:#1a3524!important;color:#e8f5ec!important;cursor:pointer!important;font-size:16px!important;line-height:1!important;padding:0!important;flex-shrink:0!important}'
+  +'.cal-head .cal-title{font-size:14px!important;font-weight:600!important;flex:1!important;text-align:center!important;color:#e8f5ec!important}'
+  +'.cal-week{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:3px!important;margin-bottom:6px!important;width:100%!important}'
+  +'.cal-week span{text-align:center!important;font-size:11px!important;color:#7fa88a!important;padding:4px 0!important;display:block!important}'
+  +'.cal-grid{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:3px!important;width:100%!important}'
+  +'.cal-day{aspect-ratio:1/1.15!important;min-width:0!important;border-radius:9px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;cursor:pointer!important;border:1px solid transparent!important;position:relative!important;background:#1a3524!important;padding:2px!important;box-sizing:border-box!important}'
+  +'.cal-day.empty{background:transparent!important;border:none!important;cursor:default!important}'
+  +'.cal-day.future{opacity:.5!important}'
+  +'.cal-num{font-size:12px!important;color:#7fa88a!important;font-weight:500!important;line-height:1.1!important;position:relative!important;z-index:2!important}'
+  +'.cal-day.today{border:2px solid #fbbf24!important;background:rgba(251,191,36,.12)!important}'
+  +'.cal-day.today .cal-num{color:#fbbf24!important;font-weight:700!important}'
+  +'.cal-day.green{background:rgba(74,222,128,.2)!important}'
+  +'.cal-day.green .cal-num{color:#86efac!important}'
+  +'.cal-day.partial{background:rgba(251,191,36,.12)!important}'
+  +'.cal-day.meal{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(251,191,36,.06))!important;border:1px solid rgba(251,191,36,.4)!important}'
+  +'.cal-day.reward{background:linear-gradient(135deg,rgba(251,191,36,.35),rgba(251,191,36,.12))!important;border:1px solid rgba(251,191,36,.7)!important}'
+  +'.cal-day.cool{background:linear-gradient(135deg,rgba(165,216,243,.35),rgba(219,234,254,.18))!important;border:1px solid rgba(165,216,243,.7)!important}'
+  +'.cal-day.cool .cal-num{color:#a5d8f3!important;font-weight:700!important}'
+  +'.cal-day.birthday{background:linear-gradient(135deg,rgba(255,80,80,.4),rgba(255,180,60,.28))!important;border:1px solid rgba(255,215,0,.8)!important}'
+  +'.cal-day.rest{background:linear-gradient(135deg,rgba(196,181,253,.4),rgba(167,139,250,.2))!important;border:1px solid rgba(196,181,253,.8)!important}'
+  +'.cal-day.rest-candidate{background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(96,165,250,.1))!important;border:1px dashed rgba(167,139,250,.7)!important}'
+  +'.cal-day.jj-release{background:linear-gradient(135deg,rgba(167,139,250,.35),rgba(139,92,246,.18))!important;border:1px solid rgba(167,139,250,.8)!important}'
+  +'.cal-day.jj-release .cal-num{color:#c4b5fd!important;font-weight:700!important}'
+  +'.cal-day::before{font-size:9px!important;position:absolute!important;top:1px!important;right:2px!important;line-height:1!important}'
+  +'.cal-day.meal::before{content:"◆"!important;color:#fbbf24!important}'
+  +'.cal-day.reward::before{content:"★"!important;color:#fbbf24!important;font-size:11px!important}'
+  +'.cal-day.cool::before{content:"❄"!important;color:#a5d8f3!important;top:1px!important;left:2px!important;right:auto!important}'
+  +'.cal-day.birthday::before{content:"🎂"!important;font-size:10px!important}'
+  +'.cal-day.rest::before{content:"🏖"!important;font-size:10px!important}'
+  +'.cal-day.rest-candidate::before{content:"?"!important;color:#a78bfa!important;font-weight:700!important}'
+  +'.cal-day.jj-release::before{content:"💧"!important;font-size:9px!important}'
+  +'.cal-dots{display:flex!important;gap:2px!important;position:relative!important;z-index:2!important;justify-content:center!important}'
+  +'.dot{width:3px!important;height:3px!important;border-radius:50%!important;background:rgba(255,255,255,.15)!important;display:inline-block!important}'
+  +'.dot.on.sleep{background:#f472b6!important}'
+  +'.dot.on.study{background:#60a5fa!important}'
+  +'.dot.on.jj{background:#a78bfa!important}'
+  +'.dot.on.wake{background:#fb923c!important}'
+  +'.heat-legend{display:flex!important;gap:12px!important;flex-wrap:wrap!important;font-size:11px!important;color:#7fa88a!important;margin-top:10px!important}';
+  var st=document.createElement('style');
+  st.id='calFixStyle';
+  st.textContent=css;
+  document.head.appendChild(st);
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
