@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a1a12">
 <title>自律花园</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <style>
+<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 :root{--bg:#0d1f14;--card:#142a1c;--card2:#1a3524;--line:#244a30;--txt:#e8f5ec;--muted:#7fa88a;--dim:#4d7a5c;--accent:#4ade80;--accent2:#22c55e;--gold:#fbbf24;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--ice:#a5d8f3;--r:16px}
 body.cold{--bg:#0a1520;--card:#0f2233;--card2:#14293d;--line:#1e3a52;--txt:#dbeafe;--muted:#7aa8c8;--dim:#4a6d8a;--accent:#60a5fa;--accent2:#3b82f6;--gold:#93c5fd}
@@ -321,9 +321,7 @@ function defaultState(){
     settings:{startDate:'',sleepDeadline:'23:30',wakeDeadline:'05:20',birthday:'',editLimitPerMonth:3,jjInitial:10,jjIncrement:5},
     birthdayCard:{used:false,usedDate:'',delayDate:'',delayResolved:false,prompted:false},
     records:{},
-    // 唯一支出流水
     expenses:[],
-    // 大类：isFood → 进入饮食板块；isJunk → 触发异常
     cats:[
       {id:'c_normal',name:'正常用餐',color:'#4ade80',isFood:true, isJunk:false},
       {id:'c_fruit', name:'水果',    color:'#fbbf24',isFood:true, isJunk:false},
@@ -350,23 +348,85 @@ function defaultState(){
     trees:[],editLog:[],restReschedule:{},restResolved:{},restPrompted:{}
   };
 }
-function saveState(s){try{localStorage.setItem(LS_STATE,JSON.stringify(state))}catch(e){if(!s)toast('存储失败')}}
+
+/* ========== 云端同步逻辑（修复版） ========== */
+const SUPABASE_URL = 'https://fbwwylbqovbzjhgcojzd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0';
+
+let supabaseClient = null;
+let currentUser = null;
+
+function saveState(silent){
+  if(!state) return;
+  state.updatedAt = new Date().toISOString();
+  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {}
+  if(!currentUser || !supabaseClient) return;
+  supabaseClient.from('garden_data').upsert({
+    user_id: currentUser.id,
+    data: state,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' }).then(({error})=>{
+    if(error){
+      console.error('云端保存失败:', error);
+      if(!silent) toast('数据已存本地，云端同步失败');
+    }
+  }).catch(e=>console.error('云端保存异常:',e));
+}
+
+async function initCloud(){
+  try {
+    if(typeof window.supabase === 'undefined'){
+      throw new Error('Supabase 库未能加载');
+    }
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    currentUser = user;
+    if(!currentUser){
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
+      if(error) throw error;
+      currentUser = data.user;
+    }
+    await loadFromCloud();
+  } catch(err){
+    console.error('云端初始化失败:', err);
+    const raw = localStorage.getItem(LS_STATE);
+    if(raw){ try{ state = JSON.parse(raw); }catch(e){ state = defaultState(); } }
+    else { state = defaultState(); }
+    migrate();
+    render(false);
+    toast('云端连接失败，当前使用本地数据');
+  }
+}
+
+async function loadFromCloud(){
+  if(!currentUser || !supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from('garden_data')
+    .select('data')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if(error) throw error;
+  if(data && data.data){
+    state = Object.assign(defaultState(), data.data);
+  } else {
+    state = defaultState();
+  }
+  migrate();
+  render(false);
+}
+
+/* ========== 打卡核心 ========== */
 function pushUndo(l){try{undoStack.push({label:l,snap:JSON.stringify(state)})}catch(e){};if(undoStack.length>12)undoStack.shift();updateUndoBtn()}
 function doUndo(){const it=undoStack.pop();if(!it){toast('没有可撤销的操作');return}state=JSON.parse(it.snap);saveState(true);updateUndoBtn();render();toast('已撤销：'+it.label)}
 function updateUndoBtn(){const b=$('#undoBtn');if(!b)return;b.classList.toggle('on',undoStack.length>0);b.textContent=undoStack.length?'↶'+undoStack.length:'↶'}
 function getRecord(d){if(!state.records[d])state.records[d]={};return state.records[d]}
-
-/* ========== 大类/标签/支出 派生 ========== */
 function getCat(id){return state.cats.find(c=>c.id===id)||{name:'已删除',color:'#64748b',isFood:false,isJunk:false}}
 function getTag(id){return state.tags.find(t=>t.id===id)}
 function getDayExpenses(d){return state.expenses.filter(e=>e.date===d)}
 function getDayFoods(d){return state.expenses.filter(e=>e.date===d && getCat(e.catId).isFood)}
-// 用钱达标：没有 isJunk 的支出
 function isMoneyOk(d){return !getDayExpenses(d).some(e=>getCat(e.catId).isJunk)}
-// 饮食达标：没有 isJunk 的食物支出
 function isDietOk(d){return !getDayFoods(d).some(e=>getCat(e.catId).isJunk)}
 
-/* ========== 自动失败检查 ========== */
 function autoCheckWakeFail(){
   const today=todayStr();const r=state.records[today];
   if(r&&r.wake&&r.wake.checked)return;
@@ -398,7 +458,6 @@ function getStudyCooldown(tier){if(tier==='cool1')return 1;if(tier==='cool2')ret
 function getDayCooldown(rec,dateKey){
   let total=0;const breakdown=[];
   if(rec.study&&rec.study.tier&&rec.study.tier.startsWith('cool')){const d=getStudyCooldown(rec.study.tier);total+=d;breakdown.push({name:'学习'+rec.study.hours+'h',days:d});}
-  // 用钱/饮食从 expenses 派生
   if(!isDietOk(dateKey)){total+=2;breakdown.push({name:'饮食异常（垃圾食品）',days:2});}
   else if(!isMoneyOk(dateKey)){total+=1;breakdown.push({name:'用钱异常',days:1});}
   if(rec.jingji&&rec.jingji.checked&&rec.jingji.ok===false){total+=2;breakdown.push({name:'养精蓄锐破戒',days:2});}
@@ -425,7 +484,6 @@ function isGreenForCycle(rec,dateKey,isJJReleaseDay){
   return !!(sleepOk&&wakeOk&&studyOk&&moneyOk&&dietOk&&jjOk);
 }
 
-/* ========== 核心推演 ========== */
 function computeSchedule(){
   const result={};const today=todayStr();
   const startDateStr=state.settings.startDate||today;
@@ -472,7 +530,6 @@ function computeSchedule(){
   return result;
 }
 
-/* ========== 判定 ========== */
 function judgeStudy(h,isReward){
   if(isReward){if(h>=7)return{tier:'normal',label:'正常',msg:'奖励日 ≥7h'};if(h>=6)return{tier:'cool1',label:'冷静1天',msg:'奖励日 6-7h'};return{tier:'cool2',label:'冷静2天',msg:'奖励日 <6h'};}
   if(h>=10)return{tier:'reward',label:'奖励加餐',msg:'≥10h，今晚可加餐'};
@@ -829,7 +886,7 @@ function getDayItems(rec,info,dateKey){
 }
 function treeIcon(t){const m={grass:'🌱',pine:'🌲',cherry:'🌸',maple:'🍁',ginkgo:'🍂',oak:'🌳',willow:'🌿',peach:'🍑',crystal:'💎',world:'🌟',dead:'🥀'};return m[t]||'🌳';}
 
-/* ========== 日历（只读过去和今天） ========== */
+/* ========== 日历 ========== */
 function viewCalendar(){
   if(!calCursor){const d=parseD(todayStr());calCursor={y:d.getFullYear(),m:d.getMonth()}}
   const{y,m}=calCursor;
@@ -887,7 +944,7 @@ function viewCalendar(){
   </div>`;
 }
 
-/* ========== 记录页（含所有管理） ========== */
+/* ========== 记录页 ========== */
 function viewRecord(){
   const today=todayStr();
   const rec=getRecord(today);const sch=computeSchedule();const info=sch[today]||{};
@@ -904,7 +961,6 @@ function viewRecord(){
   const todayExpenses=getDayExpenses(today);
   const todayFoods=getDayFoods(today);
   const moneyOk=isMoneyOk(today);const dietOk=isDietOk(today);
-  // 五项核心：睡觉、起床、学习、用钱、饮食、养精蓄锐（健身选做）
   const allCoreChecked=sleepChecked&&wakeChecked&&studyChecked&&todayExpenses.length>0&&jjEffective;
   const canSleep=inSleepWindow();const canWake=inWakeWindow();
   const jj=state.jj;const jjProgress=jj.cycleLength>0?(jj.current/jj.cycleLength*100):0;
@@ -940,7 +996,6 @@ function viewRecord(){
     </div>
   </div>
 
-  <!-- 用钱板块（包含用钱记录、饮食判定） -->
   <div class="card">
     <div class="card-t"><h3>用钱 / 饮食</h3><span class="sub">今日已花 ¥${todaySpent.toFixed(2)}</span></div>
     <div class="hint" style="margin-bottom:8px;">点标签加到待记录。提交后自动同步到资金和饮食板块。</div>
@@ -961,7 +1016,6 @@ function viewRecord(){
     ${pending.length>0?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px;color:#fca5a5;" data-act="clear-pending">清空待记录</button>`:''}
   </div>
 
-  <!-- 今日明细 -->
   <div class="card">
     <div class="card-t"><h3>今日明细</h3><span class="sub">${todayExpenses.length} 笔</span></div>
     ${todayExpenses.length>0?todayExpenses.map(e=>{
@@ -985,7 +1039,6 @@ function viewRecord(){
     `:''}
   </div>
 
-  <!-- 养精蓄锐 -->
   <div class="card">
     <div class="task ${(jjChecked||isJJRelease)?'checked':''} ${jjChecked&&!rec.jingji.ok?'failed':''} ${isJJRelease&&!jjChecked?'auto':''}">
       <div class="task-head"><div class="task-icon">🧘</div><div class="task-title"><h4>养精蓄锐</h4><p>第 ${jj.current}/${jj.cycleLength} 天${isJJRelease?' · 💧 释放日':''}</p></div></div>
@@ -998,7 +1051,6 @@ function viewRecord(){
   ${allCoreChecked&&confirmed?`<div class="card" style="text-align:center;color:#86efac;font-size:13px;">今天已确认 ✓</div>`:''}
   ${editMode&&!confirmed?`<div class="card" style="background:rgba(251,191,36,.08)"><div class="hint" style="margin-bottom:8px;color:var(--gold);">修改模式</div><button class="btn btn-p" data-act="openConfirm">✓ 重新核对</button></div>`:''}
 
-  <!-- 大类管理 -->
   <div class="card">
     <div class="card-t"><h3>大类管理</h3><button class="btn btn-p btn-sm" data-act="add-cat">＋ 新增大类</button></div>
     <div class="hint" style="margin-bottom:8px;">「食物」大类进入饮食板块统计，「垃圾」大类会触发饮食异常。</div>
@@ -1013,7 +1065,6 @@ function viewRecord(){
     }).join('')}
   </div>
 
-  <!-- 标签管理 -->
   <div class="card">
     <div class="card-t"><h3>标签管理</h3><button class="btn btn-p btn-sm" data-act="add-tag">＋ 新增标签</button></div>
     <div class="hint" style="margin-bottom:8px;">点标签可改名称、价格、所属大类。</div>
@@ -1135,7 +1186,7 @@ function viewFinance(){
   </div>`;
 }
 
-/* ========== 饮食板块（只读 + 可视化） ========== */
+/* ========== 饮食板块 ========== */
 function viewDiet(){
   const today=todayStr();
   const todayFoods=getDayFoods(today);
@@ -1255,9 +1306,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act],[data-date],[data-checkin],[data-reset],[data-add-tag],[data-jj-set],[data-sleep-reason],[data-card],[data-rm-tag],[data-edit-tag],[data-rm-cat],[data-edit-cat],[data-rm-pending],[data-rm-expense],[data-future]');
   if(!el)return;
   if(el.dataset.future!==undefined){toast('不能查看未来的日期');return}
-  // 删除待记录
   if(el.dataset.rmPending!==undefined){e.stopPropagation();const today=todayStr();const r=getRecord(today);if(r._moneyPending)r._moneyPending=r._moneyPending.filter(p=>p.id!==el.dataset.rmPending);saveState();render();return}
-  // 删除已提交支出
   if(el.dataset.rmExpense!==undefined){
     e.stopPropagation();
     if(confirm('删除这条记录？')){
@@ -1267,7 +1316,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 点击标签（记录页加到 pending）
   if(el.dataset.addTag!==undefined){
     const tag=getTag(el.dataset.addTag);if(!tag)return;
     const today=todayStr();const r=getRecord(today);
@@ -1278,7 +1326,6 @@ document.addEventListener('click',e=>{
     toast(`已添加：${tag.name} ¥${tag.price}${cat.isJunk?' ⚠':''}`);
     return;
   }
-  // 删除标签
   if(el.dataset.rmTag!==undefined){
     e.stopPropagation();
     const t=getTag(el.dataset.rmTag);
@@ -1288,7 +1335,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 编辑标签
   if(el.dataset.editTag!==undefined && !e.target.closest('[data-rm-tag]')){
     const tag=getTag(el.dataset.editTag);if(!tag)return;
     openSheet(`
@@ -1326,7 +1372,6 @@ document.addEventListener('click',e=>{
     });
     return;
   }
-  // 删除大类（连带删标签）
   if(el.dataset.rmCat!==undefined){
     const id=el.dataset.rmCat;const cat=getCat(id);
     const cnt=state.tags.filter(t=>t.catId===id).length;
@@ -1338,7 +1383,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 编辑大类
   if(el.dataset.editCat!==undefined){
     const cat=getCat(el.dataset.editCat);
     openSheet(`
@@ -1388,7 +1432,6 @@ document.addEventListener('click',e=>{
     });
     return;
   }
-  // 打卡相关
   if(el.dataset.checkin!==undefined){doCheckin(el.dataset.checkin);return}
   if(el.dataset.reset!==undefined){const r=getRecord(todayStr());if(r[el.dataset.reset])delete r[el.dataset.reset];saveState();render();toast('已重置');return}
   if(el.dataset.jjSet!==undefined){const r=getRecord(todayStr());r._jjPending=el.dataset.jjSet;saveState();render();return}
@@ -1684,63 +1727,20 @@ function migrate(){
   if(!state.restPrompted)state.restPrompted={};
   if(!state.editLog)state.editLog=[];
 }
-/* ========== 云端同步逻辑 ========== */
-// ⚠️ 这里填你 Supabase 项目里的信息！
-const SUPABASE_URL = 'https://fbwwylbqovbzjhgcojzd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0'; // 注意：千万不要填 secret key！
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let currentUser = null;
-
-async function initCloud() {
-  try {
-    // 1. 检查 Supabase 库是否加载成功
-    if (typeof window.supabase === 'undefined') {
-      throw new Error('Supabase 库未能加载，请检查网络');
-    }
-    // 2. 匿名登录
-    const { data: { user } } = await supabase.auth.getUser();
-    currentUser = user;
-    if (!currentUser) {
-      const { data, error } = await supabase.auth.signInAnonymously();
-      if (error) throw error;
-      currentUser = data.user;
-    }
-    // 3. 加载云端数据
-    await loadFromCloud();
-  } catch (err) {
-    console.error('云端初始化失败:', err);
-    // 4. 即使云端失败，也要显示本地界面，绝不白屏
-    const raw = localStorage.getItem(LS_STATE);
-    if (raw) { state = JSON.parse(raw); } else { state = defaultState(); }
-    migrate();
-    render(false);
-    toast('云端连接失败，当前使用本地数据');
+/* 启动 */
+(function(){
+  const raw = localStorage.getItem(LS_STATE);
+  if(raw){
+    try { state = JSON.parse(raw); } catch(e){ state = defaultState(); }
+  } else {
+    state = defaultState();
   }
-}
-
-async function saveState(silent) {
-  state.updatedAt = new Date().toISOString();
-  
-  // 1. 先存到本地缓存（防止断网丢失）
-  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {}
-  
-  // 2. 再同步到云端
-  if (!currentUser) return;
-  const { error } = await supabase.from('garden_data').upsert({
-    user_id: currentUser.id,
-    data: state,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id' });
-    
-  if (error) {
-    console.error('云端保存失败:', error);
-    if (!silent) toast('数据已存本地，云端同步失败');
-  }
-}
-
-// 启动云端初始化
-initCloud();
+  migrate();
+  autoCheckWakeFail();
+  render(false);
+  initCloud();
+})();
 </script>
 </body>
 </html>
