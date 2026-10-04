@@ -2725,6 +2725,40 @@ function render(preserve){
   st.textContent=css;
   document.head.appendChild(st);
 })();
+  /* ========== 微调 v4：日历上移 + 底部留白 ========== */
+(function(){
+  var st = document.createElement('style');
+  st.textContent = ''
+    + 'body{padding-bottom:130px!important}'
+    + '.view{padding-bottom:40px!important}'
+    + '.card{margin-bottom:12px!important}'
+    + '.tabbar{padding-bottom:calc(10px + env(safe-area-inset-bottom))!important}';
+  document.head.appendChild(st);
+})();
+
+(function(){
+  var _origRender = render;
+  render = function(preserve){
+    _origRender(preserve);
+    try{
+      var view = document.getElementById('view');
+      if(!view) return;
+      // 找到日历卡片
+      var cards = view.querySelectorAll('.card');
+      var calCard = null;
+      for(var i=0;i<cards.length;i++){
+        var h3 = cards[i].querySelector('h3');
+        if(h3 && h3.textContent.indexOf('日历')>=0){ calCard = cards[i]; break; }
+      }
+      if(!calCard) return;
+      // 移到 .hero 之前（即能量条之后）
+      var hero = view.querySelector('.hero');
+      if(hero && hero.parentNode === view){
+        view.insertBefore(calCard, hero);
+      }
+    }catch(e){ console.error('moveCalendarError', e); }
+  };
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
