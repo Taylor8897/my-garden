@@ -3068,6 +3068,126 @@ function viewCalendar(){
     if(state.settings) state.settings.manualRestPlan = { date: '2026-10-09' };
   };
 })();
+  /* ========== v10：休息日跟随冷静期顺延 + 睡觉打卡弹窗询问 ========== */
+(function(){
+  // 1. 睡觉判定（凌晨打卡按晚睡处理）
+  judgeSleep = function(time, reason){
+    if(!time) return {success:false, msg:'未打卡'};
+    var t = timeToMin(time);
+    var d = timeToMin(state.settings.sleepDeadline || '23:30');
+    if(t < d - 12*60) t += 24*60;
+    if(t <= d) return {success:true, msg:'按时上床 ✓'};
+    if(reason === 'work') return {success:true, msg:'晚睡原因：工作/不可抗力 ✓'};
+    return {success:false, msg:'超过截止时间且非不可抗力'};
+  };
+
+  // 2. 睡觉打卡：晚睡时弹窗问原因
+  var _origDoCheckinV10 = doCheckin;
+  doCheckin = function(project){
+    if(project !== 'sleep') return _origDoCheckinV10(project);
+    var today = todayStr();
+    var rec = getRecord(today);
+    if(rec.birthdayCard){ toast('生日豁免日'); return; }
+    if(rec.sleep && rec.sleep.checked){ toast('已打卡'); return; }
+    if(!inSleepWindow()){ toast('不在打卡窗口（23:00-次日5:00）'); return; }
+
+    var nowT = nowTimeStr();
+    var nowM = timeToMin(nowT);
+    var deadline = timeToMin(state.settings.sleepDeadline || '23:30');
+    var adjM = nowM < deadline - 12*60 ? nowM + 24*60 : nowM;
+    var isLate = adjM > deadline;
+
+    if(!isLate){
+      pushUndo('打卡：睡觉');
+      var j = judgeSleep(nowT, null);
+      rec.sleep = {time:nowT, success:j.success, msg:j.msg, checked:true};
+      saveState(); render();
+      toast('睡觉打卡成功 ✓ ' + nowT);
+      return;
+    }
+
+    openSheet('<h3>晚睡原因</h3>'
+      + '<div style="font-size:13px;color:var(--muted);line-height:1.8;">'
+      + '<p>当前时间 <b style="color:#fff">' + nowT + '</b>，已超过截止时间 ' + (state.settings.sleepDeadline || '23:30') + '。</p>'
+      + '<p style="margin-top:10px">请选择晚睡原因：</p>'
+      + '</div>'
+      + '<div class="chips" style="margin-top:14px;">'
+      + '<div class="chip" data-pick="work">工作 / 不可抗力</div>'
+      + '<div class="chip" data-pick="fun">娱乐 / 自己拖的</div>'
+      + '</div>',
+      function(sheet){
+        sheet.querySelectorAll('[data-pick]').forEach(function(ch){
+          ch.onclick = function(){
+            var reason = ch.dataset.pick;
+            pushUndo('打卡：睡觉');
+            var rec2 = getRecord(today);
+            var j = judgeSleep(nowT, reason);
+            rec2.sleep = {time:nowT, success:j.success, msg:j.msg, checked:true};
+            saveState();
+            closeSheet();
+            render();
+            if(j.success) toast('睡觉打卡 ✓ ' + j.msg);
+            else toast('睡觉打卡 ✗ ' + j.msg);
+          };
+        });
+      }
+    );
+  };
+})();
+
+(function(){
+  // 3. 手动休息日跟随冷静期顺延
+  var _prevCSV10 = computeSchedule;
+  computeSchedule = function(){
+    var result = _prevCSV10();
+    // 撤销旧补丁留下的"手动休息日"标记
+    for(var k in result){
+      if(result[k].isManualRest){
+        result[k].isRest = false;
+        result[k].isManualRest = false;
+        result[k].isRestConfirmed = false;
+        result[k].isRestCandidate = false;
+      }
+    }
+    var plan = state.settings && state.settings.manualRestPlan;
+    if(!plan || !plan.date || !state.settings.startDate) return result;
+
+    // 从 startDate 数"有效日"（非冷静日），数到目标天数，那天就是休息日
+    var targetDays = diffDays(parseD(state.settings.startDate), parseD(plan.date)) + 1;
+    var count = 0;
+    var d = parseD(state.settings.startDate);
+    var targetKey = null;
+    for(var i = 0; i < 60; i++){
+      var key = fmtDate(d);
+      if(!result[key]) break;
+      var info = result[key];
+      var isCooldown = (info.type === 'cooldown' || info.type === 'future-cooldown');
+      if(!isCooldown){
+        count++;
+        if(count === targetDays){
+          targetKey = key;
+          break;
+        }
+      }
+      d = addDays(d, 1);
+    }
+    if(targetKey && result[targetKey]){
+      result[targetKey] = Object.assign({}, result[targetKey], {
+        type: 'rest',
+        isRest: true,
+        isManualRest: true,
+        isRestConfirmed: true,
+        isReward: false,
+        isMealDay: false,
+        isRestCandidate: false,
+        cooldownRemaining: 0,
+        isJJRelease: false,
+        cooldownBreakdown: null
+      });
+    }
+    return result;
+  };
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
