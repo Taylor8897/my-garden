@@ -2365,14 +2365,7 @@ function viewMe(){
   `;
 }
 
-/* 报告下载限制（覆盖原函数） */
-var _origDownloadReport = downloadReport;
-function downloadReport(type){
-  const sch=computeSchedule();const info=sch[todayStr()]||{};
-  if(type==='small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
-  if(type==='big' && !info.isRest){ toast('大周期报告仅休息日可下载'); return; }
-  _origDownloadReport(type);
-}
+
   /* ========== 最终补丁 v2（倒计时 + 日历 + 报告限制） ========== */
 function renderTabbar(){
   const icons={
@@ -2554,14 +2547,19 @@ function viewMe(){
   `;
 }
 
-/* 报告下载限制（拦截原函数） */
-var _origDownloadReport = downloadReport;
-window.downloadReport = function(type){
-  const sch=computeSchedule();const info=sch[todayStr()]||{};
-  if(type==='small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
-  if(type==='big' && !info.isRest){ toast('大周期报告仅休息日可下载'); return; }
-  _origDownloadReport(type);
-};
+/* ========== 报告下载限制（唯一版本） ========== */
+(function(){
+  var originalDownload = window.downloadReport;
+  window.downloadReport = function(type){
+    try{
+      var sch = computeSchedule();
+      var info = sch[todayStr()] || {};
+      if(type === 'small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
+      if(type === 'big' && !info.isRest){ toast('大周期报告仅休息日可下载'); return; }
+      if(typeof originalDownload === 'function') originalDownload(type);
+    }catch(e){ console.error('report error', e); if(typeof originalDownload === 'function') originalDownload(type); }
+  };
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
