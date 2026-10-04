@@ -6,7 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a1a12">
 <title>自律花园</title>
-<style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 :root{--bg:#0d1f14;--card:#142a1c;--card2:#1a3524;--line:#244a30;--txt:#e8f5ec;--muted:#7fa88a;--dim:#4d7a5c;--accent:#4ade80;--accent2:#22c55e;--gold:#fbbf24;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--ice:#a5d8f3;--r:16px}
 body.cold{--bg:#0a1520;--card:#0f2233;--card2:#14293d;--line:#1e3a52;--txt:#dbeafe;--muted:#7aa8c8;--dim:#4a6d8a;--accent:#60a5fa;--accent2:#3b82f6;--gold:#93c5fd}
@@ -1683,17 +1684,64 @@ function migrate(){
   if(!state.restPrompted)state.restPrompted={};
   if(!state.editLog)state.editLog=[];
 }
-function init(){
-  try{
-    const raw=localStorage.getItem(LS_STATE);
-    if(raw){state=JSON.parse(raw);migrate();}
-    else{state=defaultState();}
-  }catch(e){console.error('初始化出错:',e);state=defaultState();}
-  if(state.enabled)autoCheckWakeFail();
-  saveState(true);
+/* ========== 云端同步逻辑 ========== */
+// ⚠️ 这里填你 Supabase 项目里的信息！
+const SUPABASE_URL = 'https://fbwwylbqovbzjhgcojzd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0'; // 注意：千万不要填 secret key！
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
+async function initCloud() {
+  // 1. 匿名登录（无需注册，自动生成唯一ID）
+  const { data: { user } } = await supabase.auth.getUser();
+  currentUser = user;
+  if (!currentUser) {
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error) { toast('云端连接失败，请检查网络'); return; }
+    currentUser = data.user;
+  }
+  
+  // 2. 从云端加载数据
+  await loadFromCloud();
+}
+async function loadFromCloud() {
+  if (!currentUser) return;
+  const { data, error } = await supabase.from('garden_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+  if (error) { console.error('加载失败:', error); return; }
+  
+  if (data && data.data) {
+    state = Object.assign(defaultState(), data.data);
+    migrate();
+    saveState(true); 
+  } else {
+    state = defaultState();
+  }
   render(false);
 }
-init();
+
+async function saveState(silent) {
+  state.updatedAt = new Date().toISOString();
+  
+  // 1. 先存到本地缓存（防止断网丢失）
+  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {}
+  
+  // 2. 再同步到云端
+  if (!currentUser) return;
+  const { error } = await supabase.from('garden_data').upsert({
+    user_id: currentUser.id,
+    data: state,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' });
+    
+  if (error) {
+    console.error('云端保存失败:', error);
+    if (!silent) toast('数据已存本地，云端同步失败');
+  }
+}
+
+// 启动云端初始化
+initCloud();
 </script>
 </body>
 </html>
