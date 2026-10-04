@@ -27,18 +27,12 @@ body:not(.rest) .cloud{display:none}
 .party-ribbon{position:fixed;top:-40px;width:14px;height:32px;pointer-events:none;z-index:3;border-radius:2px;animation:partyRibbonFall linear infinite;box-shadow:0 0 8px rgba(255,215,0,.4)}
 @keyframes partyRibbonFall{0%{transform:translateY(0) rotate(0deg);opacity:1}50%{transform:translateY(50vh) rotate(360deg)}100%{transform:translateY(105vh) rotate(720deg);opacity:.3}}
 body:not(.bd-celebration) .party-ribbon{display:none}
-.hbd-float{position:fixed;pointer-events:none;z-index:2;font-family:"Songti SC","Noto Serif SC",serif;font-weight:900;letter-spacing:10px;color:rgba(255,215,0,.22);text-shadow:0 0 24px rgba(255,80,80,.5);animation:hbdFloat 9s ease-in-out infinite;white-space:nowrap}
-@keyframes hbdFloat{0%,100%{opacity:0;transform:translateY(30px) scale(.9)}50%{opacity:1;transform:translateY(-30px) scale(1.08)}}
-body:not(.bd-celebration) .hbd-float{display:none}
-.hbd-star{position:fixed;pointer-events:none;z-index:2;color:#ffd700;text-shadow:0 0 10px #ff4d4d,0 0 20px #ff8833;font-size:14px;animation:hbdStarTwinkle 3s ease-in-out infinite}
-@keyframes hbdStarTwinkle{0%,100%{opacity:.15;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.3) rotate(180deg)}}
-body:not(.bd-celebration) .hbd-star{display:none}
 .firework{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:999;background:currentColor;box-shadow:0 0 8px 3px currentColor;animation:fireworkBurst 1.6s ease-out forwards}
 @keyframes fireworkBurst{0%{transform:translate(0,0) scale(1.4);opacity:1}80%{opacity:.9}100%{transform:translate(var(--fx),var(--fy)) scale(0);opacity:0}}
-.hbd-burst{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:9999;font-size:78px;font-weight:900;letter-spacing:14px;font-family:"Songti SC","Noto Serif SC",serif;color:#ffd700;text-shadow:0 0 30px #ff4d4d,0 0 60px #ff8833,5px 5px 0 #8b0000;animation:hbdBurst 3.2s cubic-bezier(.2,.9,.3,1) forwards}
+.hbd-burst{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:9999;font-size:78px;font-weight:900;letter-spacing:14px;color:#ffd700;text-shadow:0 0 30px #ff4d4d,0 0 60px #ff8833;animation:hbdBurst 3.2s cubic-bezier(.2,.9,.3,1) forwards}
 @keyframes hbdBurst{0%{transform:scale(.05) rotate(-25deg);opacity:0;filter:blur(30px)}18%{transform:scale(1.9) rotate(8deg);opacity:1;filter:blur(0)}45%{transform:scale(1.25) rotate(-4deg);opacity:1}75%{transform:scale(1.55) rotate(3deg);opacity:1}100%{transform:scale(2.4) rotate(0deg);opacity:0;filter:blur(10px)}}
 .app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;z-index:3}
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;backdrop-filter:blur(18px);background:rgba(13,31,20,.82);border-bottom:1px solid rgba(36,74,48,.7);transition:background .8s}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;backdrop-filter:blur(18px);background:rgba(13,31,20,.82);border-bottom:1px solid rgba(36,74,48,.7)}
 body.cold .topbar{background:rgba(10,21,32,.82)}
 body.rest .topbar{background:rgba(31,26,46,.82)}
 body.bd-celebration .topbar{background:rgba(42,10,10,.88)}
@@ -79,7 +73,6 @@ body.bd-celebration .topbar{background:rgba(42,10,10,.88)}
 .task{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
 .task.checked{opacity:.65;border-color:rgba(74,222,128,.3)}
 .task.failed{opacity:.7;border-color:rgba(248,113,113,.4)}
-.task.locked{opacity:.5}
 .task.auto{opacity:.85;border-color:rgba(167,139,250,.4)}
 .task.bd-disabled{opacity:.35;filter:grayscale(.5)}
 .task-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -106,61 +99,6 @@ body.cold .task-btn,body.rest .task-btn,body.bd-celebration .task-btn{color:#fff
 .rec-amt{font-size:13.5px;font-weight:600;flex-shrink:0}
 .rec-amt.bad{color:var(--red)}
 .rec-rm{padding:4px 8px;border-radius:7px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#fca5a5;font-size:11px;cursor:pointer;flex-shrink:0}
-.cat-group{margin-bottom:12px;padding:12px;background:var(--card2);border-radius:12px;border:1px solid var(--line)}
-.cat-group-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.cat-group-h .name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
-.cat-group-h .name i{width:9px;height:9px;border-radius:3px;display:inline-block}
-.tag-list{display:flex;flex-wrap:wrap;gap:5px}
-.tag-item{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:var(--card);border:1px solid var(--line);border-radius:8px;font-size:11.5px;cursor:pointer}
-.tag-item:active{transform:scale(.96)}
-.tag-item .rm{color:#fca5a5;font-weight:700;font-size:13px;line-height:1}
-.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.cal-head button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer;font-size:13px}
-.cal-head .cal-title{font-size:13px;font-weight:600}
-.cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:5px}
-.cal-week span{text-align:center;font-size:9.5px;color:var(--muted);padding:3px 0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-day{aspect-ratio:1/1.2;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;border:1px solid transparent;position:relative}
-.cal-day.empty{cursor:default}
-.cal-day.future{opacity:.4;cursor:not-allowed}
-.cal-num{font-size:10.5px;color:var(--muted);font-weight:500;position:relative;z-index:2}
-.cal-day.today{border-color:var(--gold);background:rgba(251,191,36,.08)}
-.cal-day.today .cal-num{color:var(--gold);font-weight:700}
-.cal-day.green{background:rgba(74,222,128,.15)}
-.cal-day.green .cal-num{color:#86efac}
-.cal-day.partial{background:rgba(251,191,36,.1)}
-.cal-day.meal{background:linear-gradient(135deg,rgba(251,191,36,.16),rgba(251,191,36,.04));border:1px solid rgba(251,191,36,.35)}
-.cal-day.meal::before{content:'◆';position:absolute;top:0;right:2px;font-size:9px;color:var(--gold)}
-.cal-day.reward{background:linear-gradient(135deg,rgba(251,191,36,.28),rgba(251,191,36,.10));border:1px solid rgba(251,191,36,.65)}
-.cal-day.reward::before{content:'★';position:absolute;top:0;right:2px;font-size:11px;color:var(--gold)}
-.cal-day.cool{background:linear-gradient(135deg,rgba(165,216,243,.3),rgba(219,234,254,.15));border:1px solid rgba(165,216,243,.6)}
-.cal-day.cool::before{content:'❄';position:absolute;top:0;left:2px;font-size:8px;color:var(--ice)}
-.cal-day.cool .cal-num{color:#4a90c8;font-weight:700}
-.cal-day.birthday{background:linear-gradient(135deg,rgba(255,80,80,.35),rgba(255,180,60,.25));border:1px solid rgba(255,215,0,.7)}
-.cal-day.birthday::before{content:'🎂';position:absolute;top:0;right:1px;font-size:11px}
-.cal-day.rest{background:linear-gradient(135deg,rgba(196,181,253,.35),rgba(167,139,250,.15));border:1px solid rgba(196,181,253,.7)}
-.cal-day.rest::before{content:'🏖';position:absolute;top:0;right:1px;font-size:10px}
-.cal-day.rest-candidate{background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(96,165,250,.08));border:1px dashed rgba(167,139,250,.6)}
-.cal-day.rest-candidate::before{content:'?';position:absolute;top:0;right:2px;font-size:9px;color:#a78bfa;font-weight:700}
-.cal-day.jj-release{background:linear-gradient(135deg,rgba(167,139,250,.3),rgba(139,92,246,.15));border:1px solid rgba(167,139,250,.7)}
-.cal-day.jj-release::before{content:'💧';position:absolute;top:0;right:1px;font-size:9px}
-.cal-day.jj-release .cal-num{color:#c4b5fd;font-weight:700}
-.cal-dots{display:flex;gap:1.5px;position:relative;z-index:2}
-.dot{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.15)}
-.dot.on.money{background:var(--accent)}
-.dot.on.study{background:var(--blue)}
-.dot.on.diet{background:var(--gold)}
-.dot.on.jj{background:var(--purple)}
-.dot.on.sleep{background:var(--pink)}
-.dot.on.wake{background:#fb923c}
-.cards-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.card-item{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer}
-.card-item:active{transform:scale(.95)}
-.card-item.disabled{opacity:.3;pointer-events:none}
-.card-item .ci-icon{font-size:22px;margin-bottom:4px}
-.card-item .ci-name{font-size:11px;font-weight:600;margin-bottom:2px}
-.card-item .ci-count{font-size:10.5px;color:var(--gold);font-weight:700}
-.card-item .ci-count small{color:var(--muted);font-weight:400;font-size:9px}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:grid;grid-template-columns:repeat(7,1fr);background:rgba(13,31,20,.95);backdrop-filter:blur(20px);border-top:1px solid var(--line);padding:8px 2px calc(8px + env(safe-area-inset-bottom));z-index:60}
 body.cold .tabbar{background:rgba(10,21,32,.95)}
 body.rest .tabbar{background:rgba(31,26,46,.95)}
@@ -176,21 +114,16 @@ body.bd-celebration .tabbar{background:rgba(42,10,10,.96)}
 .close-row{display:flex;gap:8px;margin-top:14px}
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:rgba(20,42,28,.97);border:1px solid var(--line);color:var(--txt);padding:10px 18px;border-radius:12px;font-size:12.5px;z-index:200;transition:.28s;pointer-events:none;max-width:86%;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-body.cold .toast{background:rgba(15,34,51,.97)}
-body.rest .toast{background:rgba(42,36,64,.97)}
-body.bd-celebration .toast{background:rgba(61,16,16,.98);border-color:rgba(255,215,0,.4);color:#ffd700}
 .btn{width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn-p{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#062}
 body.cold .btn-p,body.rest .btn-p,body.bd-celebration .btn-p{color:#fff}
-body.bd-celebration .btn-p{background:linear-gradient(135deg,#ff4d4d,#ff8833)}
 .btn-g{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
 .btn-sm{padding:8px 12px;font-size:12px;width:auto}
 .btn-purple{background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:6px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;position:relative;user-select:none}
+.chip{padding:6px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
 .chip:active{transform:scale(.95)}
 .chip.on{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.5);color:var(--accent);font-weight:500}
 .chip.emotion.on{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.5);color:#c4b5fd}
@@ -207,26 +140,14 @@ textarea.txt{min-height:60px}
 .empty{text-align:center;padding:24px 0;color:var(--dim);font-size:12px}
 .jj-progress{height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:8px;overflow:hidden}
 .jj-bar{height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,#a78bfa,#8b5cf6);transition:width .4s}
-.cool-detail{background:rgba(165,216,243,.06);border:1px solid rgba(165,216,243,.2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11.5px;color:#bfdbfe;line-height:1.7}
-.cool-detail b{color:#fff;display:block;margin-bottom:5px;font-size:12px}
-.cool-detail .cd-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed rgba(165,216,243,.15)}
-.cool-detail .cd-row:last-child{border-bottom:none}
-.cool-detail .cd-row span:last-child{color:#93c5fd;font-weight:600}
-.rest-hero{text-align:center;padding:48px 22px 40px;background:linear-gradient(150deg,rgba(196,181,253,.12),rgba(167,139,250,.04));border:1px solid rgba(196,181,253,.25);border-radius:24px;margin-bottom:14px;position:relative;overflow:hidden}
-.rest-icon{font-size:72px;line-height:1;margin-bottom:16px;animation:restBob 4s ease-in-out infinite}
-@keyframes restBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
-.rest-title{font-size:24px;font-weight:800;margin-bottom:10px;background:linear-gradient(135deg,#c4b5fd,#a78bfa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.rest-hero{text-align:center;padding:48px 22px 40px;background:linear-gradient(150deg,rgba(196,181,253,.12),rgba(167,139,250,.04));border:1px solid rgba(196,181,253,.25);border-radius:24px;margin-bottom:14px}
+.rest-icon{font-size:72px;line-height:1;margin-bottom:16px}
+.rest-title{font-size:24px;font-weight:800;margin-bottom:10px;color:#c4b5fd}
 .rest-sub{font-size:13px;color:var(--muted);line-height:1.8;max-width:320px;margin:0 auto}
-.rest-tip{margin-top:22px;padding:14px;background:rgba(255,255,255,.04);border-radius:14px;border:1px solid rgba(196,181,253,.15);font-size:12.5px;color:var(--muted);line-height:1.7;text-align:left}
-.rest-tip b{color:var(--accent);display:block;margin-bottom:6px;font-size:13px}
-.rest-next{margin-top:18px;font-size:11.5px;color:var(--dim)}
-.bd-hero{text-align:center;padding:48px 22px 40px;background:linear-gradient(150deg,rgba(255,80,80,.15),rgba(255,140,60,.08));border:1px solid rgba(255,215,0,.3);border-radius:26px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(180,0,0,.3)}
-.bd-icon{font-size:76px;line-height:1;margin-bottom:18px;animation:bdFloat 5s ease-in-out infinite;filter:drop-shadow(0 0 22px rgba(255,215,0,.6))}
-@keyframes bdFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.06)}}
-.bd-title{font-size:32px;font-weight:900;letter-spacing:8px;margin-bottom:14px;background:linear-gradient(135deg,#ffd700,#ff8833,#ff4d4d,#ffd700);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-family:"Songti SC","Noto Serif SC",serif}
+.bd-hero{text-align:center;padding:48px 22px 40px;background:linear-gradient(150deg,rgba(255,80,80,.15),rgba(255,140,60,.08));border:1px solid rgba(255,215,0,.3);border-radius:26px;margin-bottom:14px}
+.bd-icon{font-size:76px;line-height:1;margin-bottom:18px}
+.bd-title{font-size:32px;font-weight:900;letter-spacing:8px;margin-bottom:14px;color:#ffd700}
 .bd-sub{font-size:13px;color:#ffd7c0;line-height:2;max-width:300px;margin:0 auto}
-.bd-tip{margin-top:24px;padding:16px;background:rgba(255,215,0,.05);border-radius:16px;border:1px solid rgba(255,215,0,.15);font-size:12.5px;color:#ffd7c0;line-height:1.9;text-align:left}
-.bd-tip b{color:#ffd700;display:block;margin-bottom:8px;font-size:13px;font-weight:600}
 .fin-hero{background:linear-gradient(150deg,#1a2137,#141827);border:1px solid #27304a;border-radius:18px;padding:18px;margin-bottom:10px}
 .fin-amount{font-size:32px;font-weight:800;letter-spacing:-1px;margin:6px 0 2px;color:#8fb0ff}
 .fin-sub{font-size:12px;color:#8791a8}
@@ -237,7 +158,6 @@ textarea.txt{min-height:60px}
 .trend-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
 .trend-bar .bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#5b8cff,#3b6edb);min-height:2px;transition:height .6s}
 .trend-bar .bar.junk{background:linear-gradient(180deg,#f0883e,#db6d28)}
-.trend-bar .bar.food{background:linear-gradient(180deg,#4ade80,#22c55e)}
 .trend-bar .lbl{font-size:9px;color:var(--dim)}
 .rec-list{display:flex;flex-direction:column;gap:8px}
 .rec-item{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:12.5px}
@@ -257,7 +177,6 @@ textarea.txt{min-height:60px}
 .slider-wrap{display:flex;align-items:center;gap:10px}
 .slider-wrap input[type=range]{flex:1;accent-color:var(--accent)}
 .slider-val{min-width:38px;text-align:right;font-weight:700;font-size:15px;color:var(--accent)}
-.slider-hint{font-size:10.5px;color:var(--dim);margin-top:4px}
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
 .bar-name{width:60px;color:var(--muted);flex-shrink:0}
 .bar-track{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
@@ -267,28 +186,41 @@ textarea.txt{min-height:60px}
 .cross-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:12.5px}
 .cross-row:last-child{border-bottom:none}
 .cross-rate{font-weight:600;font-variant-numeric:tabular-nums}
-.reward-card{background:linear-gradient(135deg,#4a2a1a,#2a1a10);border:1.5px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;animation:cardIn .5s cubic-bezier(.2,.9,.3,1)}
+.reward-card{background:linear-gradient(135deg,#4a2a1a,#2a1a10);border:1.5px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;animation:cardIn .5s}
 @keyframes cardIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-.reward-card::before{content:'';position:absolute;inset:0;background:radial-gradient(400px 200px at 50% 0%,rgba(251,191,36,.25),transparent 70%);pointer-events:none}
-.reward-ico{font-size:44px;text-align:center;margin-bottom:8px;filter:drop-shadow(0 0 14px rgba(251,191,36,.6))}
+.reward-ico{font-size:44px;text-align:center;margin-bottom:8px}
 .reward-title{font-size:17px;font-weight:800;color:var(--gold);text-align:center;margin-bottom:6px}
 .reward-desc{font-size:12.5px;color:#ffd7c0;text-align:center;line-height:1.6;margin-bottom:10px}
 .reward-expire{font-size:11px;text-align:center;color:#fca5a5;margin-bottom:12px;font-weight:600}
-.reward-actions{display:flex;gap:8px;position:relative;z-index:2}
+.reward-actions{display:flex;gap:8px}
 .violation-item{padding:8px 10px;background:rgba(248,113,113,.08);border-radius:8px;margin-bottom:6px;font-size:12.5px;border:1px solid rgba(248,113,113,.2)}
 .violation-item.emergency{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)}
 .big-cheer{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:9999;font-weight:900;text-align:center;padding:0 20px;white-space:pre-line;line-height:1.3}
-.cheer-tier1{font-size:52px;letter-spacing:10px;color:#fbbf24;text-shadow:0 0 40px #fbbf24,0 0 80px #ff8833,4px 4px 0 #8b0000;animation:cheer1 3s cubic-bezier(.2,.9,.3,1) forwards}
+.cheer-tier1{font-size:52px;letter-spacing:10px;color:#fbbf24;text-shadow:0 0 40px #fbbf24,0 0 80px #ff8833;animation:cheer1 3s forwards}
 @keyframes cheer1{0%{transform:scale(.1) rotate(-30deg);opacity:0;filter:blur(30px)}15%{transform:scale(2) rotate(12deg);opacity:1;filter:blur(0)}30%{transform:scale(1.4) rotate(-8deg);opacity:1}50%{transform:scale(1.8) rotate(5deg);opacity:1}70%{transform:scale(1.5) rotate(-3deg);opacity:1}100%{transform:scale(3) rotate(0);opacity:0;filter:blur(15px)}}
-.cheer-tier2{font-size:44px;letter-spacing:8px;color:#4ade80;text-shadow:0 0 30px #4ade80,0 0 60px #22c55e;animation:cheer2 2.8s cubic-bezier(.2,.9,.3,1) forwards}
+.cheer-tier2{font-size:44px;letter-spacing:8px;color:#4ade80;text-shadow:0 0 30px #4ade80,0 0 60px #22c55e;animation:cheer2 2.8s forwards}
 @keyframes cheer2{0%{transform:scale(.2) rotate(-20deg);opacity:0;filter:blur(20px)}25%{transform:scale(1.6) rotate(8deg);opacity:1;filter:blur(0)}60%{transform:scale(1.2) rotate(-4deg);opacity:1}100%{transform:scale(2.2) rotate(0);opacity:0;filter:blur(10px)}}
-.cheer-tier3{font-size:48px;letter-spacing:12px;background:linear-gradient(135deg,#ffd700,#a78bfa,#ffd700);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 30px rgba(255,215,0,.8));animation:cheer3 3s cubic-bezier(.2,.9,.3,1) forwards}
+.cheer-tier3{font-size:48px;letter-spacing:12px;background:linear-gradient(135deg,#ffd700,#a78bfa,#ffd700);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:cheer3 3s forwards}
 @keyframes cheer3{0%{transform:scale(.15) rotate(-25deg);opacity:0;filter:blur(25px)}20%{transform:scale(1.8) rotate(10deg);opacity:1;filter:blur(0)}50%{transform:scale(1.3) rotate(-5deg);opacity:1}75%{transform:scale(1.6) rotate(3deg);opacity:1}100%{transform:scale(2.5) rotate(0);opacity:0;filter:blur(12px)}}
-.cheer-tier4{font-size:50px;letter-spacing:14px;background:linear-gradient(135deg,#f87171,#fbbf24,#4ade80,#60a5fa,#a78bfa,#f472b6,#f87171);background-size:400% 400%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:cheer4 3.5s cubic-bezier(.2,.9,.3,1) forwards}
-@keyframes cheer4{0%{transform:scale(.1) rotate(-40deg);opacity:0;filter:blur(35px);background-position:0% 50%}15%{transform:scale(2.2) rotate(15deg);opacity:1;filter:blur(0)}40%{transform:scale(1.4) rotate(-8deg);opacity:1;background-position:100% 50%}65%{transform:scale(1.8) rotate(5deg);opacity:1;background-position:0% 50%}100%{transform:scale(3.2) rotate(0);opacity:0;filter:blur(18px);background-position:100% 50%}}
+.cheer-tier4{font-size:50px;letter-spacing:14px;background:linear-gradient(135deg,#f87171,#fbbf24,#4ade80,#60a5fa,#a78bfa,#f472b6,#f87171);background-size:400% 400%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:cheer4 3.5s forwards}
+@keyframes cheer4{0%{transform:scale(.1) rotate(-40deg);opacity:0;filter:blur(35px)}15%{transform:scale(2.2) rotate(15deg);opacity:1;filter:blur(0)}40%{transform:scale(1.4) rotate(-8deg);opacity:1}65%{transform:scale(1.8) rotate(5deg);opacity:1}100%{transform:scale(3.2) rotate(0);opacity:0;filter:blur(18px)}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 body.shake{animation:shake .5s}
-/* ====== 情绪仪表盘 ====== */
+.energy{background:linear-gradient(150deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+.energy-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
+.energy-val{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:3px;margin:4px 0 8px}
+.dot-p{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.08)}
+.dot-p.on-resist{background:linear-gradient(90deg,#4ade80,#22c55e);box-shadow:0 0 8px rgba(74,222,128,.5)}
+.dot-p.on-restart{background:linear-gradient(90deg,#a78bfa,#8b5cf6);box-shadow:0 0 8px rgba(167,139,250,.5)}
+.energy-meta{display:flex;gap:12px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+.energy-meta b{color:var(--txt);font-weight:600}
+.tier{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--card2);border-radius:9px;margin-bottom:6px;font-size:12.5px;border:1px solid transparent}
+.tier.reached{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.08)}
+.tier.next{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06)}
+.tier-ico{font-size:16px;margin-right:8px}
+.tier-name{flex:1}
+.tier-cnt{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .dash-hero{background:linear-gradient(150deg,rgba(167,139,250,.18),rgba(96,165,250,.08));border:1px solid rgba(167,139,250,.35);border-radius:18px;padding:16px;margin-bottom:12px}
 .dash-hero-t{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .dash-hero-t h3{font-size:15px;font-weight:700}
@@ -297,35 +229,82 @@ body.shake{animation:shake .5s}
 .dash-cell{background:rgba(0,0,0,.18);border-radius:12px;padding:12px 10px}
 .dash-cell.resist{border:1px solid rgba(74,222,128,.25)}
 .dash-cell.restart{border:1px solid rgba(167,139,250,.25)}
-.dash-cell .lbl{font-size:10.5px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.dash-cell .lbl{font-size:10.5px;color:var(--muted);margin-bottom:4px}
 .dash-cell .val{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
 .dash-cell.resist .val{color:#4ade80}
 .dash-cell.restart .val{color:#c4b5fd}
 .dash-cell .sub2{font-size:10.5px;color:var(--muted);margin-top:4px}
 .weather-card{background:linear-gradient(150deg,rgba(251,191,36,.14),rgba(167,139,250,.08));border:1px solid rgba(251,191,36,.35);border-radius:16px;padding:14px;margin-bottom:10px}
-.weather-title{font-size:14px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.weather-title{font-size:14px;font-weight:700;margin-bottom:6px}
 .weather-main{font-size:13px;color:var(--muted);line-height:1.8}
 .weather-main b{color:#fde68a;font-weight:700}
 .weather-tip{margin-top:10px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.6;border-left:3px solid #fbbf24}
+/* 热力图通用样式 */
 .heatmap{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:10px 0 6px}
-.heat-cell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.04);display:grid;place-items:center;font-size:9px;color:var(--dim);position:relative;cursor:default}
+.heat-cell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.04);display:grid;place-items:center;font-size:9px;color:rgba(255,255,255,.55);position:relative;cursor:default}
 .heat-cell.has{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .heat-cell.today{outline:2px solid var(--gold);outline-offset:1px}
 .heat-legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-top:8px}
 .heat-legend span{display:flex;align-items:center;gap:4px}
 .heat-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-/* ====== 表格 ====== */
-.table-wrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+.heat-grad{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10.5px;color:var(--muted)}
+.heat-grad .bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.05),#1a4d2e,#22c55e,#16a34a);overflow:hidden}
 .data-table{width:100%;border-collapse:collapse;font-size:12.5px}
-.data-table th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.data-table th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;padding:7px 8px;border-bottom:1px solid var(--line)}
 .data-table th.num{text-align:right}
 .data-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.04);font-variant-numeric:tabular-nums}
 .data-table td.num{text-align:right}
 .data-table td.bad{color:#fca5a5}
 .data-table td.ok{color:#86efac}
 .data-table tr:last-child td{border-bottom:none}
-.data-table tbody tr:hover{background:rgba(255,255,255,.02)}
 .color-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+/* 启用页 */
+.activation-screen{position:fixed;inset:0;z-index:9999;background:radial-gradient(1200px 600px at 50% -10%,rgba(74,222,128,.15),transparent 60%),linear-gradient(180deg,#0d1f14 0%,#06110a 100%);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.activation-card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px 24px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.activation-card .logo{width:80px;height:80px;border-radius:26px;margin:0 auto 20px;display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,rgba(74,222,128,.2),rgba(34,197,94,.08));border:1px solid rgba(74,222,128,.3)}
+.activation-card h1{font-size:22px;font-weight:800;text-align:center;margin-bottom:10px}
+.activation-card .sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.8;margin-bottom:26px}
+.activation-rules{background:var(--card2);border-radius:16px;padding:16px;margin-bottom:18px;border:1px solid var(--line)}
+.activation-rules h3{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.activation-rules ul{list-style:none;padding:0}
+.activation-rules li{font-size:12.5px;color:var(--muted);line-height:1.9;padding-left:22px;position:relative;margin-bottom:6px}
+.activation-rules li::before{content:'·';position:absolute;left:8px;top:0;color:var(--accent);font-size:18px;font-weight:900}
+.activation-rules li b{color:var(--txt);font-weight:600}
+.activation-rules li.warn{color:#fca5a5}
+.activation-rules li.warn b{color:#fca5a5}
+.activation-today{background:linear-gradient(135deg,rgba(74,222,128,.12),rgba(34,197,94,.04));border:1px solid rgba(74,222,128,.3);border-radius:14px;padding:14px;text-align:center;margin-bottom:18px}
+.activation-today .lbl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.activation-today .val{font-size:22px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.activation-check{display:flex;align-items:flex-start;gap:10px;padding:14px;background:var(--card2);border-radius:14px;margin-bottom:16px;border:1px solid var(--line);cursor:pointer;user-select:none}
+.activation-check input{width:20px;height:20px;margin-top:1px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.activation-check .lbl{font-size:12.5px;color:var(--muted);line-height:1.6}
+.activation-check .lbl b{color:var(--txt);font-weight:600}
+.activation-btn{width:100%;padding:15px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#4ade80,#22c55e);color:#062;box-shadow:0 8px 24px rgba(74,222,128,.3)}
+.activation-btn:active{transform:scale(.97)}
+.activation-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;background:#3a4a3e;color:#7fa88a}
+/* ===== 倒计时 & 解锁动画 ===== */
+.countdown-screen{position:fixed;inset:0;z-index:9998;background:radial-gradient(1200px 800px at 50% 40%,rgba(74,222,128,.15),transparent 60%),linear-gradient(180deg,#0d1f14 0%,#06110a 100%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.countdown-screen.cracking{animation:crackShake 1.2s}
+@keyframes crackShake{0%{transform:scale(1)}20%{transform:scale(1.03) translate(-4px,4px)}40%{transform:scale(.98) translate(4px,-4px)}60%{transform:scale(1.02) translate(-6px,-6px)}80%{transform:scale(.99) translate(3px,3px)}100%{transform:scale(1.05);opacity:0}}
+.cd-content{text-align:center;position:relative;z-index:2;padding:24px}
+.cd-title{font-size:22px;font-weight:800;color:#4ade80;letter-spacing:2px;margin-bottom:10px;text-shadow:0 0 20px rgba(74,222,128,.5)}
+.cd-sub{font-size:12px;color:var(--muted);margin-bottom:30px}
+.cd-timer{display:flex;gap:10px;justify-content:center;margin-bottom:26px}
+.cd-block{background:rgba(20,42,28,.8);border:1px solid rgba(74,222,128,.25);border-radius:14px;padding:14px 10px;min-width:68px}
+.cd-num{font-size:32px;font-weight:800;color:#4ade80;font-variant-numeric:tabular-nums;line-height:1;text-shadow:0 0 14px rgba(74,222,128,.6)}
+.cd-lbl{font-size:10.5px;color:var(--muted);margin-top:5px}
+.cd-quote{font-size:14px;color:#e8f5ec;min-height:22px;letter-spacing:1px;transition:opacity .3s}
+.cd-tip{font-size:11px;color:var(--dim);margin-top:16px}
+.cd-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.cd-stars::before,.cd-stars::after{content:'';position:absolute;top:0;left:50%;width:2px;height:2px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80,100px 200px 0 #4ade80,300px 100px 0 #fbbf24,500px 300px 0 #4ade80,200px 500px 0 #60a5fa,400px 600px 0 #fbbf24,600px 200px 0 #4ade80,700px 500px 0 #a78bfa,800px 300px 0 #4ade80,900px 600px 0 #60a5fa;animation:starMove 12s linear infinite}
+.cd-stars::after{top:50%;left:20%;animation-duration:18s;animation-delay:-6s}
+@keyframes starMove{0%{transform:translate(0,0)}100%{transform:translate(-100vw,100vh)}}
+.unlock-welcome{position:fixed;inset:0;z-index:9997;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .6s;text-align:center}
+.unlock-welcome.show{opacity:1}
+.uw-main{font-size:44px;font-weight:900;letter-spacing:12px;color:#fbbf24;text-shadow:0 0 30px #fbbf24,0 0 60px #ff8833;text-align:center;animation:uwPop 1s cubic-bezier(.34,1.56,.64,1)}
+@keyframes uwPop{0%{transform:scale(.2) rotate(-15deg);opacity:0;filter:blur(20px)}60%{transform:scale(1.2) rotate(5deg);opacity:1;filter:blur(0)}100%{transform:scale(1) rotate(0);opacity:1}}
+.uw-sub{font-size:14px;color:#e8f5ec;text-align:center;margin-top:14px;letter-spacing:2px;opacity:0;animation:uwSub .8s .4s forwards}
+@keyframes uwSub{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -340,7 +319,6 @@ body.shake{animation:shake .5s}
 </div>
 <div id="layer"></div>
 <div class="toast" id="toast"></div>
-
 <script>
 /* ========== 工具 ========== */
 const $=(s,r=document)=>r.querySelector(s);
@@ -386,7 +364,7 @@ const TIERS_RESTART=[
 function inSleepWindow(){const m=nowMin();return m>=SLEEP_WINDOW.start||m<SLEEP_WINDOW.end}
 function inWakeWindow(){const m=nowMin();return m>=WAKE_WINDOW.start&&m<WAKE_WINDOW.end}
 
-/* ========== 云同步 ========== */
+/* ========== 云同步配置 ========== */
 const SUPABASE_URL='https://fbwwylbqovbzjhgcolzd.supabase.co';
 const SUPABASE_KEY='sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0';
 const SYNC_ID_KEY='garden_sync_user_id_v1';
@@ -399,12 +377,12 @@ let booted=false,suppressSync=false;
 let syncStatusType='idle',syncStatusText='正在连接云端…';
 
 /* ========== 状态 ========== */
-const LS_STATE='garden_v19_official';
+const LS_STATE='garden_v20_official';
 let state=null,undoStack=[],activeTab='home',willTab='resist',scrollPos=0;
 
 function defaultState(){
   return{
-    version:19,enabled:false,
+    version:20,enabled:false,activated:false,
     settings:{startDate:'',sleepDeadline:'23:30',wakeDeadline:'05:20',birthday:'',editLimitPerMonth:3,jjInitial:10,jjIncrement:5},
     birthdayCard:{used:false,usedDate:'',delayDate:'',delayResolved:false,prompted:false},
     records:{},expenses:[],
@@ -445,7 +423,7 @@ function scheduleCloudSync(){if(cloudSyncTimeout)clearTimeout(cloudSyncTimeout);
 function cloudPush(silent){
   if(!state||!state.enabled){if(!silent)setSyncStatus('warn','系统尚未启用');return Promise.resolve({ok:false});}
   if(!silent)setSyncStatus('warn','正在上传…');
-  const payload={user_id:syncUserId,items:{__type:'garden',version:state.version||19,state},remedy_pool:[],sim_date:todayStr(),updated_at:new Date().toISOString()};
+  const payload={user_id:syncUserId,items:{__type:'garden',version:state.version||20,state},remedy_pool:[],sim_date:todayStr(),updated_at:new Date().toISOString()};
   return fetch(SUPABASE_URL+'/rest/v1/user_data?on_conflict=user_id',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify([payload])})
     .then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error(t)});if(!silent){const t=new Date();setSyncStatus('ok','已上传 · '+pad2(t.getHours())+':'+pad2(t.getMinutes()));}return{ok:true};})
     .catch(e=>{if(!silent)setSyncStatus('err','上传失败：'+(e.message||e));return{ok:false,error:e};});
@@ -640,7 +618,7 @@ function spawnFireworks(tierType){
   }
 }
 
-/* ========== 重启逻辑 ========== */
+/* ========== 打卡判断 ========== */
 function autoCheckWakeFail(){
   const today=todayStr();const r=state.records[today];
   if(r&&r.wake&&r.wake.checked)return;
@@ -750,6 +728,85 @@ function judgeWake(time){
   if(t<=d)return{fitness:true,msg:'起床达标 ✓'};
   return{fitness:false,msg:'超时，健身变灰'};
 }
+
+/* ========== 热力图数据生成 ========== */
+// 总体完成度热力图：返回最近 30 天每日完成度（0-6 项）
+function buildOverallHeatmap(){
+  const sch=computeSchedule();
+  const today=todayStr();
+  const arr=[];
+  for(let i=29;i>=0;i--){
+    const d=addDays(new Date(),-i);const k=fmtDate(d);
+    const rec=state.records[k]||{};
+    const info=sch[k]||{};
+    let score=0;
+    if(rec.sleep&&rec.sleep.success)score++;
+    if(rec.wake&&rec.wake.fitness)score++;
+    if(rec.study&&(rec.study.tier==='normal'||rec.study.tier==='reward'))score++;
+    if(getDayExpenses(k).length>0&&isMoneyOk(k))score++;
+    if(getDayExpenses(k).length>0&&isDietOk(k))score++;
+    if((rec.jingji&&rec.jingji.checked&&rec.jingji.ok===true)||info.isJJRelease)score++;
+    arr.push({date:k,day:+k.slice(8),score,total:6,info,isToday:k===today});
+  }
+  return arr;
+}
+// 学习热力图：每天学习小时数
+function buildStudyHeatmap(){
+  const today=todayStr();
+  const arr=[];
+  for(let i=29;i>=0;i--){
+    const d=addDays(new Date(),-i);const k=fmtDate(d);
+    const rec=state.records[k]||{};
+    const hours=rec.study&&rec.study.hours?rec.study.hours:0;
+    arr.push({date:k,day:+k.slice(8),hours,isToday:k===today});
+  }
+  return arr;
+}
+// 资金热力图：每天花费
+function buildMoneyHeatmap(){
+  const today=todayStr();
+  const arr=[];
+  for(let i=29;i>=0;i--){
+    const d=addDays(new Date(),-i);const k=fmtDate(d);
+    const spent=state.expenses.filter(e=>e.date===k).reduce((a,b)=>a+(b.price||0),0);
+    const junk=state.expenses.filter(e=>e.date===k&&getCat(e.catId).isJunk).reduce((a,b)=>a+(b.price||0),0);
+    arr.push({date:k,day:+k.slice(8),spent,junk,isToday:k===today});
+  }
+  return arr;
+}
+// 完成度颜色（总体热力图）
+function overallColor(score,total){
+  if(score===0)return{color:'rgba(255,255,255,.04)',alpha:1};
+  const ratio=score/total;
+  if(ratio>=1)return{color:'#16a34a',alpha:1};      // 全绿
+  if(ratio>=0.83)return{color:'#22c55e',alpha:0.85}; // 5/6
+  if(ratio>=0.66)return{color:'#4ade80',alpha:0.7};  // 4/6
+  if(ratio>=0.5)return{color:'#fbbf24',alpha:0.65};  // 3/6
+  if(ratio>=0.33)return{color:'#fb923c',alpha:0.6};  // 2/6
+  return{color:'#f87171',alpha:0.55};                 // 1/6
+}
+// 学习热力图颜色（深绿=时长高）
+function studyColor(hours){
+  if(hours<=0)return{color:'rgba(255,255,255,.04)',alpha:1};
+  if(hours>=10)return{color:'#14532d',alpha:1};
+  if(hours>=9)return{color:'#166534',alpha:1};
+  if(hours>=8)return{color:'#15803d',alpha:1};
+  if(hours>=6)return{color:'#16a34a',alpha:0.85};
+  if(hours>=4)return{color:'#22c55e',alpha:0.7};
+  if(hours>=2)return{color:'#4ade80',alpha:0.6};
+  return{color:'#86efac',alpha:0.5};
+}
+// 资金热力图颜色（蓝，深=花费高）
+function moneyColor(spent){
+  if(spent<=0)return{color:'rgba(255,255,255,.04)',alpha:1};
+  if(spent>=100)return{color:'#1e3a8a',alpha:1};
+  if(spent>=80)return{color:'#1e40af',alpha:1};
+  if(spent>=60)return{color:'#1d4ed8',alpha:0.9};
+  if(spent>=40)return{color:'#3b82f6',alpha:0.8};
+  if(spent>=20)return{color:'#60a5fa',alpha:0.7};
+  if(spent>=10)return{color:'#93c5fd',alpha:0.6};
+  return{color:'#bfdbfe',alpha:0.5};
+}
   
 /* ========== 启用页 ========== */
 function showActivationScreen(){
@@ -784,6 +841,7 @@ function showActivationScreen(){
   el.querySelector('#actBtn').onclick=()=>{
     pushUndo('启用系统');
     state.enabled=true;
+    state.activated=true;
     state.settings.startDate=todayStr();
     const bd=el.querySelector('#actBirthday').value;
     if(bd)state.settings.birthday=bd;
@@ -797,11 +855,13 @@ function showActivationScreen(){
   };
 }
 
-/* ========== 渲染主入口 ========== */
+/* ========== 渲染主入口（修复版：只有 startDate 为空才显示启用页） ========== */
 function render(preserve){
   if(!state)state=defaultState();
   checkStreakTimeout();
-  if(!state.enabled){
+  // 修复：只有未启用（无 startDate）才显示启用页，避免误判进入生日界面
+  const notActivated = !state.enabled || !state.settings.startDate;
+  if(notActivated){
     document.body.classList.remove('cold','rest','bd-celebration');
     document.querySelector('.app').style.display='none';
     showActivationScreen();
@@ -925,10 +985,10 @@ function applyTheme(){
   document.body.classList.toggle('rest',!!isRest);
 }
 function spawnWeather(){
-  $$('.snowflake,.cloud,.party-ribbon,.hbd-float,.hbd-star').forEach(e=>e.remove());
+  $$('.snowflake,.cloud,.party-ribbon').forEach(e=>e.remove());
   if(document.body.classList.contains('cold')){const f=['❄','❅','❆','•'];for(let i=0;i<16;i++){const s=document.createElement('div');s.className='snowflake';s.textContent=f[Math.floor(Math.random()*f.length)];s.style.left=Math.random()*100+'%';s.style.fontSize=(9+Math.random()*12)+'px';s.style.animationDuration=(5+Math.random()*6)+'s';s.style.animationDelay=(Math.random()*5)+'s';s.style.opacity=.4+Math.random()*.5;document.body.appendChild(s);}}
   if(document.body.classList.contains('rest')){const c=['☁','☁','☁','🌸','🍃'];for(let i=0;i<10;i++){const r=document.createElement('div');r.className='cloud';r.textContent=c[Math.floor(Math.random()*c.length)];r.style.left=Math.random()*100+'%';r.style.fontSize=(14+Math.random()*12)+'px';r.style.animationDuration=(8+Math.random()*8)+'s';r.style.animationDelay=(Math.random()*6)+'s';document.body.appendChild(r);}}
-  if(document.body.classList.contains('bd-celebration')){const rc=['#ff4d4d','#ff8833','#ffd700','#ff69b4','#ff4040','#ffaa00'];for(let i=0;i<28;i++){const r=document.createElement('div');r.className='party-ribbon';r.style.left=Math.random()*100+'%';r.style.background=rc[Math.floor(Math.random()*rc.length)];r.style.animationDuration=(5+Math.random()*5)+'s';r.style.animationDelay=(Math.random()*6)+'s';if(Math.random()>0.5){r.style.borderRadius='50%';r.style.width='10px';r.style.height='10px';}document.body.appendChild(r);}}
+  if(document.body.classList.contains('bd-celebration')){const rc=['#ff4d4d','#ff8833','#ffd700','#ff69b4','#ff4040'];for(let i=0;i<28;i++){const r=document.createElement('div');r.className='party-ribbon';r.style.left=Math.random()*100+'%';r.style.background=rc[Math.floor(Math.random()*rc.length)];r.style.animationDuration=(5+Math.random()*5)+'s';r.style.animationDelay=(Math.random()*6)+'s';if(Math.random()>0.5){r.style.borderRadius='50%';r.style.width='10px';r.style.height='10px';}document.body.appendChild(r);}}
 }
 function showBirthdayCelebration(){
   const burst=document.createElement('div');burst.className='hbd-burst';burst.textContent='生日快乐';document.body.appendChild(burst);
@@ -949,7 +1009,7 @@ function viewHome(){
   const trees=state.trees||[],grown=trees.filter(t=>t.status==='grown');
   const isBdImm=rec.birthdayCard===true;
   if(info.isRest){
-    return `<div class="rest-hero"><div class="rest-icon">🏖</div><div class="rest-title">今天好好休息</div><div class="rest-sub">大周期已完成，不用打卡。</div><div class="rest-next">🌱 明天开始新周期</div></div>`;
+    return `<div class="rest-hero"><div class="rest-icon">🏖</div><div class="rest-title">今天好好休息</div><div class="rest-sub">大周期已完成，不用打卡。</div></div>`;
   }
   let alerts=[];
   if(info.type==='cooldown'||info.type==='future-cooldown')alerts.push({lv:'danger',ico:'❄',t:`冷静期中 · 剩余 ${info.cooldownRemaining||0} 天`,d:'五项全绿可减天'});
@@ -960,6 +1020,8 @@ function viewHome(){
   const items=getDayItems(rec,info,today);
   const jj=state.jj;const jjProgress=jj.cycleLength>0?(jj.current/jj.cycleLength*100):0;
   const todaySpent=state.expenses.filter(e=>e.date===today).reduce((a,b)=>a+(b.price||0),0);
+  // 总体热力图
+  const overallHeat=buildOverallHeatmap();
   return `
   ${activeCards.map(c=>renderRewardCard(c)).join('')}
   <div class="energy">
@@ -969,6 +1031,17 @@ function viewHome(){
     <div class="energy-row" style="margin-top:14px;"><span style="color:var(--muted)">🔄 重新启动</span><span class="energy-val" style="color:#c4b5fd">${rs.current} 连续</span></div>
     <div class="dots">${Array.from({length:restartSlots}).map((_,i)=>`<div class="dot-p ${i<rs.current?'on-restart':''}"></div>`).join('')}</div>
     <div class="energy-meta"><span>历史最长 <b>${rs.max}</b></span>${nextRs?`<span>距下档 <b>${nextRs.count-rs.current}</b></span>`:'<span>已全解锁</span>'}</div>
+  </div>
+  <div class="card">
+    <div class="card-t"><h3>📊 最近 30 天完成度</h3><span class="sub">颜色越深越接近全绿</span></div>
+    <div class="heatmap">
+      ${overallHeat.map(h=>{const{color,alpha}=overallColor(h.score,h.total);return `<div class="heat-cell ${h.score>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ${h.score}/6">${h.day}</div>`;}).join('')}
+    </div>
+    <div class="heat-grad">
+      <span>0/6</span>
+      <div class="bar" style="background:linear-gradient(90deg,#f87171,#fb923c,#fbbf24,#4ade80,#22c55e,#16a34a)"></div>
+      <span>6/6</span>
+    </div>
   </div>
   <div class="hero">
     <div class="hero-top"><span class="hero-label">小周期进度</span><span class="pill">第 ${progress}/8 天</span></div>
@@ -1032,6 +1105,8 @@ function viewRecord(){
   const jj=state.jj,jjProgress=jj.cycleLength>0?(jj.current/jj.cycleLength*100):0;
   const pending=rec._moneyPending||[];
   const todaySpent=todayExpenses.reduce((a,b)=>a+(b.price||0),0);
+  // 学习热力图
+  const studyHeat=buildStudyHeatmap();
   return `
   <div class="card">
     <div class="card-t"><h3>今日打卡 · ${today}</h3><span class="sub">${isReward?'★ 奖励日':(info.isMealDay?'◆ 食堂套餐日':(isJJRelease?'💧 释放日':''))}</span></div>
@@ -1046,6 +1121,17 @@ function viewRecord(){
     <div class="task ${studyChecked?'checked':''} ${studyChecked&&!(rec.study.tier==='normal'||rec.study.tier==='reward')?'failed':''}">
       <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>${isReward?'奖励日 ≥7h正常':'10h+奖励 · 9-10h正常 · 8-9h保守'}</p></div></div>
       ${!studyChecked?`<div style="display:flex;gap:8px"><input class="txt" type="number" step="0.1" id="in_study" placeholder="小时" style="flex:1"><button class="task-btn" data-checkin="study">打卡</button></div>`:`<div class="task-result ${rec.study.tier==='normal'||rec.study.tier==='reward'?'ok':'bad'}">${rec.study.hours}h · ${rec.study.label}</div>`}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-t"><h3>📚 最近 30 天学习时长</h3><span class="sub">越深越久</span></div>
+    <div class="heatmap">
+      ${studyHeat.map(h=>{const{color,alpha}=studyColor(h.hours);return `<div class="heat-cell ${h.hours>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ${h.hours}h">${h.day}</div>`;}).join('')}
+    </div>
+    <div class="heat-grad">
+      <span>0h</span>
+      <div class="bar" style="background:linear-gradient(90deg,#86efac,#4ade80,#22c55e,#16a34a,#15803d,#166534,#14532d)"></div>
+      <span>10h+</span>
     </div>
   </div>
   <div class="card">
@@ -1088,7 +1174,7 @@ function viewWillpower(){
   }).join('');
   const typeLabel=willTab==='resist'?'抵抗':'重启';
   return `
-  <div class="will-tabs" style="display:flex;gap:4px;background:var(--card2);padding:4px;border-radius:12px;margin-bottom:12px;border:1px solid var(--line);">
+  <div style="display:flex;gap:4px;background:var(--card2);padding:4px;border-radius:12px;margin-bottom:12px;border:1px solid var(--line);">
     <button class="btn ${willTab==='resist'?'btn-p':'btn-g'}" data-act="willTab" data-v="resist" style="flex:1;padding:8px;">💪 抵抗 (${r.current})</button>
     <button class="btn ${willTab==='restart'?'btn-purple':'btn-g'}" data-act="willTab" data-v="restart" style="flex:1;padding:8px;">🔄 重启 (${rs.current})</button>
   </div>
@@ -1130,21 +1216,14 @@ function viewEmotion(){
   const restartFail=state.actions.filter(a=>a.type==='restart'&&a.result==='fail').length;
   const resistRate=totalResist?Math.round(resistSuccess/totalResist*100):0;
   const restartRate=totalRestart?Math.round(restartSuccess/totalRestart*100):0;
-
-  // 情绪统计
   const emoCnt={};all.forEach(a=>a.emotions.forEach(e=>emoCnt[e]=(emoCnt[e]||0)+1));
   const emoList=Object.entries(emoCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const maxEmo=Math.max(...emoList.map(x=>x[1]),1);
-
   const srcCnt={};all.forEach(a=>a.sources.forEach(s=>srcCnt[s]=(srcCnt[s]||0)+1));
   const srcList=Object.entries(srcCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const maxSrc=Math.max(...srcList.map(x=>x[1]),1);
-
-  // 交叉分析
   const cross={};all.forEach(a=>a.emotions.forEach(e=>{if(!cross[e])cross[e]={ok:0,total:0};cross[e].total++;if(a.result==='success')cross[e].ok++;}));
   const crossList=Object.entries(cross).filter(([_,v])=>v.total>=2).map(([k,v])=>({name:k,rate:Math.round(v.ok/v.total*100),total:v.total})).sort((a,b)=>b.total-a.total).slice(0,6);
-
-  // 情绪天气：近7天主导情绪
   const day7=[];
   for(let i=6;i>=0;i--){
     const d=addDays(new Date(),-i);const k=fmtDate(d);
@@ -1154,18 +1233,14 @@ function viewEmotion(){
     const top=Object.entries(dayEmos).sort((a,b)=>b[1]-a[1])[0];
     day7.push({date:k,day:['日','一','二','三','四','五','六'][d.getDay()],topEmo:top?top[0]:null,count:dayActs.length});
   }
-  // 主导情绪
   const weekEmos={};
   day7.forEach(d=>{if(d.topEmo)weekEmos[d.topEmo]=(weekEmos[d.topEmo]||0)+1;});
   const weekTop=Object.entries(weekEmos).sort((a,b)=>b[1]-a[1])[0];
   const weekTopEmo=weekTop?weekTop[0]:'—';
   const weekTopCount=weekTop?weekTop[1]:0;
-  // 从所有记录找最常见源头
   const weekSrc={};
   day7.forEach(d=>{state.actions.filter(a=>a.date===d.date).forEach(a=>a.sources.forEach(s=>weekSrc[s]=(weekSrc[s]||0)+1));});
   const weekTopSrc=Object.entries(weekSrc).sort((a,b)=>b[1]-a[1])[0];
-
-  // 30天热力图
   const heat=[];
   for(let i=29;i>=0;i--){
     const d=addDays(new Date(),-i);const k=fmtDate(d);
@@ -1175,8 +1250,6 @@ function viewEmotion(){
     const top=Object.entries(dayEmos).sort((a,b)=>b[1]-a[1])[0];
     heat.push({date:k,day:+k.slice(8),emo:top?top[0]:null,count:dayActs.length,isToday:k===todayStr()});
   }
-
-  // 温柔提示
   let tip='';
   if(crossList.length){
     const worst=crossList.reduce((a,b)=>a.rate<b.rate?a:b);
@@ -1186,21 +1259,12 @@ function viewEmotion(){
       tip=`<div class="weather-tip">💡 目前各个状态下你都表现得很稳，继续保持！</div>`;
     }
   }
-
   return `
   <div class="dash-hero">
     <div class="dash-hero-t"><h3>💪 意志力总览</h3><span>${state.actions.length} 条记录</span></div>
     <div class="dash-grid">
-      <div class="dash-cell resist">
-        <div class="lbl">💪 抵抗连续</div>
-        <div class="val">${r.current}</div>
-        <div class="sub2">历史最长 ${r.max} · 成功率 ${resistRate}%</div>
-      </div>
-      <div class="dash-cell restart">
-        <div class="lbl">🔄 重启连续</div>
-        <div class="val">${rs.current}</div>
-        <div class="sub2">历史最长 ${rs.max} · 成功率 ${restartRate}%</div>
-      </div>
+      <div class="dash-cell resist"><div class="lbl">💪 抵抗连续</div><div class="val">${r.current}</div><div class="sub2">历史最长 ${r.max} · 成功率 ${resistRate}%</div></div>
+      <div class="dash-cell restart"><div class="lbl">🔄 重启连续</div><div class="val">${rs.current}</div><div class="sub2">历史最长 ${rs.max} · 成功率 ${restartRate}%</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
       <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:8px 10px;font-size:11.5px;">
@@ -1213,48 +1277,32 @@ function viewEmotion(){
       </div>
     </div>
   </div>
-
   <div class="weather-card">
     <div class="weather-title">🌤 本周情绪天气</div>
-    <div class="weather-main">
-      主导情绪：<b>${esc(weekTopEmo)}</b>（出现 ${weekTopCount} 天）
-      ${weekTopSrc?`<br>最常触发情境：<b>${esc(weekTopSrc[0])}</b>`:''}
-    </div>
+    <div class="weather-main">主导情绪：<b>${esc(weekTopEmo)}</b>（出现 ${weekTopCount} 天）${weekTopSrc?`<br>最常触发情境：<b>${esc(weekTopSrc[0])}</b>`:''}</div>
     ${tip}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📅 最近 30 天情绪热力图</h3><span class="sub">颜色 = 当天主导情绪</span></div>
     <div class="heatmap">
-      ${heat.map(h=>{
-        const c=h.emo?(EMO_COLORS[h.emo]||'#64748b'):'rgba(255,255,255,.04)';
-        const has=h.emo?'has':'';
-        const today=h.isToday?'today':'';
-        const alpha=h.emo?0.55+Math.min(h.count*0.15,0.45):1;
-        return `<div class="heat-cell ${has} ${today}" style="background:${h.emo?c:'rgba(255,255,255,.04)'};opacity:${alpha}" title="${h.date}${h.emo?' · '+h.emo:''}"></div>`;
-      }).join('')}
+      ${heat.map(h=>{const c=h.emo?(EMO_COLORS[h.emo]||'#64748b'):'rgba(255,255,255,.04)';const alpha=h.emo?0.55+Math.min(h.count*0.15,0.45):1;return `<div class="heat-cell ${h.emo?'has':''} ${h.isToday?'today':''}" style="background:${c};opacity:${alpha}" title="${h.date}${h.emo?' · '+h.emo:''}">${h.day}</div>`;}).join('')}
     </div>
     <div class="heat-legend">
       ${[...new Set(heat.filter(h=>h.emo).map(h=>h.emo))].slice(0,6).map(e=>`<span><i style="background:${EMO_COLORS[e]||'#64748b'}"></i>${esc(e)}</span>`).join('')}
-      ${heat.filter(h=>h.emo).length===0?'<span>还没有数据</span>':''}
     </div>
   </div>
-
   <div class="card">
     <div class="card-t"><h3>💭 情绪分布</h3><span class="sub">${all.length} 条</span></div>
     ${emoList.length?emoList.map(([name,cnt])=>`<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxEmo*100}%;background:linear-gradient(90deg,${EMO_COLORS[name]||'#a78bfa'},${EMO_COLORS[name]||'#8b5cf6'})"></div></div><span class="bar-cnt">${cnt}</span></div>`).join(''):'<div class="empty">还没有情绪记录</div>'}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>🎯 源头分布</h3><span class="sub">最容易触发</span></div>
     ${srcList.length?srcList.map(([name,cnt])=>`<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill blue" style="width:${cnt/maxSrc*100}%"></div></div><span class="bar-cnt">${cnt}</span></div>`).join(''):'<div class="empty">还没有源头记录</div>'}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📊 情绪 × 成功率</h3><span class="sub">什么状态下最容易破戒</span></div>
     ${crossList.length?crossList.map(c=>`<div class="cross-row"><span>${esc(c.name)} <span style="color:var(--dim);font-size:10.5px;">(${c.total}条)</span></span><span class="cross-rate" style="color:${c.rate>=60?'#86efac':c.rate>=40?'#fde68a':'#fca5a5'};">${c.rate}% 成功</span></div>`).join(''):'<div class="empty">至少需要 2 条同情绪记录</div>'}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📜 时间轴</h3><span class="sub">最近 20 条</span></div>
     ${all.length?`<div class="rec-list">${all.slice(0,20).map(a=>`
@@ -1275,15 +1323,11 @@ function viewFinance(){
   const spent=thisMonth.reduce((a,b)=>a+(b.price||0),0);
   const remain=state.budget-spent;
   const pct=Math.min(100,(spent/state.budget)*100);
-
-  // 按分类汇总
   const byCat={};
   thisMonth.forEach(e=>{const cid=e.catId||'unknown';if(!byCat[cid])byCat[cid]={count:0,amount:0};byCat[cid].count++;byCat[cid].amount+=(e.price||0);});
-  const catRows=Object.entries(byCat).map(([id,v])=>{
-    const c=getCat(id);
-    return {id,name:c.name,color:c.color,count:v.count,amount:v.amount,pct:spent?(v.amount/spent*100):0};
-  }).sort((a,b)=>b.amount-a.amount);
-
+  const catRows=Object.entries(byCat).map(([id,v])=>{const c=getCat(id);return {id,name:c.name,color:c.color,count:v.count,amount:v.amount,pct:spent?(v.amount/spent*100):0};}).sort((a,b)=>b.amount-a.amount);
+  // 资金热力图
+  const moneyHeat=buildMoneyHeatmap();
   return `
   <div class="fin-hero">
     <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:#8791a8;">本月剩余</span><span style="font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(91,140,255,.15);color:#8fb0ff;">${pct.toFixed(0)}%</span></div>
@@ -1292,30 +1336,25 @@ function viewFinance(){
     <div style="height:6px;border-radius:6px;background:rgba(255,255,255,.06);margin:12px 0;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pct>90?'linear-gradient(90deg,#f87171,#fca5a5)':'linear-gradient(90deg,#5b8cff,#7c5cff)'};transition:width .5s;"></div></div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:#8791a8;"><span>本月 ${thisMonth.length} 笔</span><span>食物 ${thisMonth.filter(e=>getCat(e.catId).isFood).length} 笔</span></div>
   </div>
-
+  <div class="card">
+    <div class="card-t"><h3>📊 最近 30 天支出</h3><span class="sub">越深花费越高</span></div>
+    <div class="heatmap">
+      ${moneyHeat.map(h=>{const{color,alpha}=moneyColor(h.spent);return `<div class="heat-cell ${h.spent>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ¥${h.spent.toFixed(0)}">${h.day}</div>`;}).join('')}
+    </div>
+    <div class="heat-grad">
+      <span>¥0</span>
+      <div class="bar" style="background:linear-gradient(90deg,#bfdbfe,#93c5fd,#60a5fa,#3b82f6,#1d4ed8,#1e40af,#1e3a8a)"></div>
+      <span>¥100+</span>
+    </div>
+  </div>
   <div class="card">
     <div class="card-t"><h3>预算设置</h3></div>
     <div style="display:flex;gap:8px;"><input class="txt" type="number" id="inBudget" value="${state.budget}" style="flex:1"><button class="btn btn-p btn-sm" data-act="saveBudget" style="width:auto;padding:10px 16px;">保存</button></div>
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📊 本月分类汇总</h3><span class="sub">${catRows.length} 类</span></div>
-    ${catRows.length?`
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>分类</th><th class="num">笔数</th><th class="num">金额</th><th class="num">占比</th></tr></thead>
-        <tbody>
-          ${catRows.map(c=>`<tr>
-            <td><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</td>
-            <td class="num">${c.count}</td>
-            <td class="num">¥${c.amount.toFixed(2)}</td>
-            <td class="num">${c.pct.toFixed(1)}%</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`:'<div class="hint">本月暂无支出</div>'}
+    ${catRows.length?`<table class="data-table"><thead><tr><th>分类</th><th class="num">笔数</th><th class="num">金额</th><th class="num">占比</th></tr></thead><tbody>${catRows.map(c=>`<tr><td><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</td><td class="num">${c.count}</td><td class="num">¥${c.amount.toFixed(2)}</td><td class="num">${c.pct.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`:'<div class="hint">本月暂无支出</div>'}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📋 最近记录</h3><span class="sub">近 10 笔</span></div>
     ${state.expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(e=>{const cat=getCat(e.catId);return `<div class="rec"><span class="rec-dot" style="background:${cat.color}"></span><div class="rec-mid"><div class="rec-name">${esc(e.name)}</div><div class="rec-meta"><span>${e.date}</span><span>${esc(cat.name)}</span></div></div><span class="rec-amt ${cat.isJunk?'bad':''}">¥${(e.price||0).toFixed(2)}</span></div>`;}).join('')||'<div class="hint">还没有记录</div>'}
@@ -1331,16 +1370,9 @@ function viewDiet(){
   const range=30;
   const startDate=fmtDate(addDays(parseD(today),-range+1));
   const recentFoods=state.expenses.filter(e=>e.date>=startDate&&e.date<=today&&getCat(e.catId).isFood);
-
-  // 近30天分类表格
   const byCat={};
   recentFoods.forEach(e=>{const cid=e.catId||'unknown';if(!byCat[cid])byCat[cid]={count:0,amount:0,junk:0};byCat[cid].count++;byCat[cid].amount+=(e.price||0);if(getCat(e.catId).isJunk)byCat[cid].junk++;});
-  const catRows=Object.entries(byCat).map(([id,v])=>{
-    const c=getCat(id);
-    return {name:c.name,color:c.color,count:v.count,amount:v.amount,junk:v.junk,isJunk:c.isJunk};
-  }).sort((a,b)=>b.count-a.count);
-
-  // 近7天日报表
+  const catRows=Object.entries(byCat).map(([id,v])=>{const c=getCat(id);return {name:c.name,color:c.color,count:v.count,amount:v.amount,junk:v.junk};}).sort((a,b)=>b.count-a.count);
   const days7=[];
   for(let i=6;i>=0;i--){
     const d=addDays(parseD(today),-i);const k=fmtDate(d);
@@ -1350,63 +1382,31 @@ function viewDiet(){
     const hasViolation=state.violations.some(v=>v.date===k&&!v.isEmergency);
     days7.push({date:k,label:pad2(d.getDate()),day:['日','一','二','三','四','五','六'][d.getDay()],count:foods.length,junkCount,spent,hasViolation});
   }
-
   const maxCount=Math.max(...days7.map(x=>x.count),1);
-
   return `
   <div class="diet-hero">
     <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--muted);">今日食物</span><span style="font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(74,222,128,.15);color:#86efac;">${todayFoods.length} 项</span></div>
     <div class="diet-amount">${todayFoods.length===0?'—':(dietOk?'✓ 正常':'⚠ 异常')}</div>
     <div class="diet-sub">今日食物花费 ¥${todayFoods.reduce((a,b)=>a+(b.price||0),0).toFixed(2)}</div>
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📅 最近 7 天日报</h3></div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>日期</th><th class="num">食物</th><th class="num">垃圾</th><th class="num">花费</th><th class="num">违规</th></tr></thead>
-        <tbody>
-          ${days7.map(d=>`<tr>
-            <td>${d.label} 周${d.day}</td>
-            <td class="num">${d.count}</td>
-            <td class="num ${d.junkCount>0?'bad':''}">${d.junkCount}</td>
-            <td class="num">¥${d.spent.toFixed(0)}</td>
-            <td class="num ${d.hasViolation?'bad':'ok'}">${d.hasViolation?'是':'—'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
+    <table class="data-table"><thead><tr><th>日期</th><th class="num">食物</th><th class="num">垃圾</th><th class="num">花费</th><th class="num">违规</th></tr></thead><tbody>
+      ${days7.map(d=>`<tr><td>${d.label} 周${d.day}</td><td class="num">${d.count}</td><td class="num ${d.junkCount>0?'bad':''}">${d.junkCount}</td><td class="num">¥${d.spent.toFixed(0)}</td><td class="num ${d.hasViolation?'bad':'ok'}">${d.hasViolation?'是':'—'}</td></tr>`).join('')}
+    </tbody></table>
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📊 近 30 天分类汇总</h3><span class="sub">${recentFoods.length} 项</span></div>
-    ${catRows.length?`
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>分类</th><th class="num">次数</th><th class="num">金额</th><th class="num">垃圾</th></tr></thead>
-        <tbody>
-          ${catRows.map(c=>`<tr>
-            <td><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</td>
-            <td class="num">${c.count}</td>
-            <td class="num">¥${c.amount.toFixed(0)}</td>
-            <td class="num ${c.junk>0?'bad':''}">${c.junk>0?c.junk:'—'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`:'<div class="hint">近30天没有食物记录</div>'}
+    ${catRows.length?`<table class="data-table"><thead><tr><th>分类</th><th class="num">次数</th><th class="num">金额</th><th class="num">垃圾</th></tr></thead><tbody>${catRows.map(c=>`<tr><td><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</td><td class="num">${c.count}</td><td class="num">¥${c.amount.toFixed(0)}</td><td class="num ${c.junk>0?'bad':''}">${c.junk>0?c.junk:'—'}</td></tr>`).join('')}</tbody></table>`:'<div class="hint">近30天没有食物记录</div>'}
   </div>
-
   <div class="card">
     <div class="card-t"><h3>📈 最近 7 天趋势</h3></div>
     <div class="trend">${days7.map(d=>`<div class="trend-bar"><div class="bar food ${d.junkCount>0?'junk':''}" style="height:${(d.count/maxCount)*70}%;"></div><div class="lbl">${d.label}</div></div>`).join('')}</div>
-    <div class="hint" style="text-align:center;">橙色 = 当天含垃圾食品</div>
   </div>
-
   <div class="card">
     <div class="card-t"><h3>🍽 今日吃了什么</h3><span class="sub">来自记录页</span></div>
     ${todayFoods.length?todayFoods.map(e=>{const cat=getCat(e.catId);return `<div class="rec"><span class="rec-dot" style="background:${cat.color}"></span><div class="rec-mid"><div class="rec-name">${esc(e.name)}</div><div class="rec-meta"><span>${esc(cat.name)}</span>${cat.isJunk?'<span style="color:#fca5a5">· 垃圾</span>':''}</div></div><span class="rec-amt ${cat.isJunk?'bad':''}">¥${(e.price||0).toFixed(2)}</span></div>`;}).join(''):'<div class="hint">今天还没有食物记录</div>'}
   </div>
-
   ${state.violations.length?`<div class="card"><div class="card-t"><h3>⚠️ 19:00 后违规</h3><span class="sub">${state.violations.length} 条</span></div>${state.violations.map(v=>`<div class="violation-item ${v.isEmergency?'emergency':''}"><b>${v.date} ${v.time}</b> · ${esc(v.itemName)} ${v.isEmergency?'<span style="color:#fde68a;">（紧急例外）</span>':'<span style="color:#fca5a5;">（违规）</span>'}${v.note?`<div style="color:var(--muted);margin-top:3px;font-size:11.5px;">${esc(v.note)}</div>`:''}</div>`).join('')}</div>`:''}
   `;
 }
@@ -1439,7 +1439,7 @@ function viewMe(){
       <button class="btn btn-p" style="flex:1;" data-act="cloudPushBtn">☁ 上传</button>
       <button class="btn btn-g" style="flex:1;" data-act="cloudPullBtn">⬇ 下载</button>
     </div>
-    <div class="hint" style="margin-top:10px;line-height:1.7;">· 每次操作后 2 秒自动上传<br>· 换设备时输入同步码即可恢复<br>· 同步码丢失将无法找回</div>
+    <div class="hint" style="margin-top:10px;line-height:1.7;">· 每次操作后 2 秒自动上传<br>· 换设备时输入同步码即可恢复</div>
   </div>
   <div class="card"><div class="card-t"><h3>初始设置</h3><span class="sub">本月可修改 ${Math.max(0,state.settings.editLimitPerMonth-editsThisMonth)} 次</span></div>
     <label class="fl">生日日期</label>
@@ -1449,6 +1449,11 @@ function viewMe(){
     <label class="fl">起床截止时间</label>
     <input class="txt" type="time" id="setWake" value="${state.settings.wakeDeadline}">
     <button class="btn btn-p" style="margin-top:14px" data-act="saveSettings">保存（消耗1次）</button>
+  </div>
+  <div class="card"><div class="card-t"><h3>📥 总结报告</h3><span class="sub">可下载可视化报告</span></div>
+    <button class="btn btn-p" data-act="downloadSmallReport">📊 下载小周期报告（HTML）</button>
+    <button class="btn btn-purple" style="margin-top:8px" data-act="downloadBigReport">📊 下载大周期报告（HTML）</button>
+    <div class="hint" style="margin-top:8px;">报告包含：所有打卡记录、意志力统计、情绪分析、资金、饮食、热力图</div>
   </div>
   <div class="card"><div class="card-t"><h3>数据备份</h3></div>
     <button class="btn btn-p" data-act="exportAll">导出全部数据</button>
@@ -1475,7 +1480,6 @@ function showActionDialog(type){
     </div>
     <label class="fl">冲动强度 <span style="color:var(--dim);font-weight:400;">（≥7 才计入连续）</span></label>
     <div class="slider-wrap"><input type="range" id="intRange" min="1" max="10" value="7" step="1"><div class="slider-val" id="intVal">7</div></div>
-    <div class="slider-hint">强度不够也建议记录，但不会计入连续</div>
     <label class="fl">冲动对象 / 想做什么 <span style="color:#fca5a5;">*必填</span></label>
     <input class="txt" id="targetInput" placeholder="${type==='resist'?'例如：想吃甜食、想刷手机':'例如：想放弃学习、想躺平'}">
     <label class="fl">当时的情绪 <span style="color:#fca5a5;">*至少选一个</span></label>
@@ -1613,6 +1617,8 @@ document.addEventListener('click',e=>{
     input.onchange=()=>{const f=input.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{try{const data=JSON.parse(fr.result);if(!confirm('导入将覆盖当前全部数据，确定？'))return;pushUndo('导入数据');state=Object.assign(defaultState(),data);saveState();render();toast('导入成功');}catch(err){toast('文件格式错误');}};fr.readAsText(f);};
     input.click();return;
   }
+  if(act==='downloadSmallReport'){downloadReport('small');return;}
+  if(act==='downloadBigReport'){downloadReport('big');return;}
   if(act==='copySyncCode'){
     const txt=syncUserId;
     if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>toast('已复制：'+txt)).catch(()=>toast('复制失败'));}
@@ -1693,12 +1699,235 @@ function doCheckin(project){
   }
 }
 
+/* ========== 总结报告生成器 ========== */
+function downloadReport(type){
+  // type: 'small' | 'big'
+  const isSmall = type === 'small';
+  const days = isSmall ? 7 : 31;
+  const today = todayStr();
+  const endDate = today;
+  const startDate = fmtDate(addDays(parseD(today), -(days - 1)));
+
+  // 收集数据
+  const sch = computeSchedule();
+  const dayList = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = addDays(parseD(today), -i);
+    const k = fmtDate(d);
+    const rec = state.records[k] || {};
+    const info = sch[k] || {};
+    const dayExp = state.expenses.filter(e => e.date === k);
+    const dayFoods = dayExp.filter(e => getCat(e.catId).isFood);
+    const dayJunk = dayFoods.filter(e => getCat(e.catId).isJunk);
+    const dayViolations = state.violations.filter(v => v.date === k);
+    let score = 0;
+    if (rec.sleep && rec.sleep.success) score++;
+    if (rec.wake && rec.wake.fitness) score++;
+    if (rec.study && (rec.study.tier === 'normal' || rec.study.tier === 'reward')) score++;
+    if (dayExp.length > 0 && isMoneyOk(k)) score++;
+    if (dayExp.length > 0 && isDietOk(k)) score++;
+    if ((rec.jingji && rec.jingji.checked && rec.jingji.ok === true) || info.isJJRelease) score++;
+    dayList.push({
+      date: k, day: +k.slice(8), score, total: 6,
+      sleep: rec.sleep || null,
+      wake: rec.wake || null,
+      study: rec.study || null,
+      jingji: rec.jingji || null,
+      info,
+      spent: dayExp.reduce((a, b) => a + (b.price || 0), 0),
+      foodCount: dayFoods.length,
+      junkCount: dayJunk.length,
+      violations: dayViolations,
+      expenseCount: dayExp.length
+    });
+  }
+
+  // 意志力统计（仅该时段）
+  const actionsInRange = state.actions.filter(a => a.date >= startDate && a.date <= endDate);
+  const resistActions = actionsInRange.filter(a => a.type === 'resist');
+  const restartActions = actionsInRange.filter(a => a.type === 'restart');
+  const resistOK = resistActions.filter(a => a.result === 'success').length;
+  const resistFail = resistActions.filter(a => a.result === 'fail').length;
+  const restartOK = restartActions.filter(a => a.result === 'success').length;
+  const restartFail = restartActions.filter(a => a.result === 'fail').length;
+  const resistRate = resistActions.length ? Math.round(resistOK / resistActions.length * 100) : 0;
+  const restartRate = restartActions.length ? Math.round(restartOK / restartActions.length * 100) : 0;
+
+  // 情绪统计
+  const emoCnt = {};
+  const srcCnt = {};
+  actionsInRange.forEach(a => {
+    (a.emotions || []).forEach(e => emoCnt[e] = (emoCnt[e] || 0) + 1);
+    (a.sources || []).forEach(s => srcCnt[s] = (srcCnt[s] || 0) + 1);
+  });
+  const emoList = Object.entries(emoCnt).sort((a, b) => b[1] - a[1]);
+  const srcList = Object.entries(srcCnt).sort((a, b) => b[1] - a[1]);
+  const maxEmo = Math.max(...emoList.map(x => x[1]), 1);
+  const maxSrc = Math.max(...srcList.map(x => x[1]), 1);
+
+  // 资金统计
+  const totalSpent = dayList.reduce((a, b) => a + b.spent, 0);
+  const totalFood = dayList.reduce((a, b) => a + b.foodCount, 0);
+  const totalJunk = dayList.reduce((a, b) => a + b.junkCount, 0);
+  const totalViolations = dayList.reduce((a, b) => a + b.violations.length, 0);
+  const greenDays = dayList.filter(d => d.score >= 5).length;
+  const perfectDays = dayList.filter(d => d.score === 6).length;
+
+  // 生成 HTML
+  const title = isSmall ? '小周期报告' : '大周期报告';
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>自律花园 · ${title}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1f14;color:#e8f5ec;font-family:-apple-system,"PingFang SC",sans-serif;padding:20px;line-height:1.6}
+.wrap{max-width:800px;margin:0 auto}
+h1{font-size:24px;margin-bottom:6px;color:#4ade80}
+.sub{color:#7fa88a;font-size:13px;margin-bottom:20px}
+.card{background:#142a1c;border:1px solid #244a30;border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:16px;margin-bottom:12px;color:#86efac}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.cell{background:#1a3524;border-radius:10px;padding:12px;text-align:center}
+.cell .lbl{font-size:11px;color:#7fa88a;margin-bottom:4px}
+.cell .val{font-size:22px;font-weight:800;color:#4ade80}
+.heatmap{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:10px 0}
+.heat-cell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.04);display:grid;place-items:center;font-size:10px;color:rgba(255,255,255,.7)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:#7fa88a;font-weight:500;font-size:11px;padding:8px;border-bottom:1px solid #244a30}
+th.num{text-align:right}
+td{padding:8px;border-bottom:1px solid rgba(255,255,255,.04)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.bad{color:#fca5a5}
+td.ok{color:#86efac}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.bar-name{width:60px;color:#7fa88a;flex-shrink:0}
+.bar-track{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#8b5cf6);border-radius:5px}
+.bar-cnt{width:30px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:11.5px}
+.action-item{background:#1a3524;border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:12.5px;border-left:3px solid #4ade80}
+.action-item.fail{border-left-color:#f87171}
+.action-item .head{display:flex;justify-content:space-between;font-size:11px;color:#7fa88a;margin-bottom:4px}
+.action-item .target{font-weight:600;margin-bottom:4px}
+.action-item .tag{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:5px;background:rgba(167,139,250,.15);color:#c4b5fd;margin-right:4px}
+.action-item .tag.src{background:rgba(96,165,250,.15);color:#93c5fd}
+.footer{text-align:center;color:#4d7a5c;font-size:11px;margin-top:20px}
+.cheer{text-align:center;padding:20px;color:#fbbf24;font-weight:700}
+</style></head><body>
+<div class="wrap">
+<h1>🌱 自律花园 · ${title}</h1>
+<div class="sub">周期：${startDate} 至 ${endDate}（共 ${days} 天）</div>
+
+<div class="card">
+<h2>📊 核心数据</h2>
+<div class="grid">
+<div class="cell"><div class="lbl">全绿天数</div><div class="val">${perfectDays}</div></div>
+<div class="cell"><div class="lbl">≥5/6 天数</div><div class="val">${greenDays}</div></div>
+<div class="cell"><div class="lbl">抵抗成功</div><div class="val">${resistOK}</div></div>
+<div class="cell"><div class="lbl">重启成功</div><div class="val">${restartOK}</div></div>
+<div class="cell"><div class="lbl">情绪记录</div><div class="val">${actionsInRange.length}</div></div>
+<div class="cell"><div class="lbl">19点违规</div><div class="val" style="color:${totalViolations>0?'#fca5a5':'#4ade80'}">${totalViolations}</div></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📅 每日完成度热力图</h2>
+<div class="heatmap">
+${dayList.map(d=>{
+  let bg='rgba(255,255,255,.04)';
+  if(d.score>=6)bg='#16a34a';
+  else if(d.score===5)bg='#22c55e';
+  else if(d.score===4)bg='#4ade80';
+  else if(d.score===3)bg='#fbbf24';
+  else if(d.score===2)bg='#fb923c';
+  else if(d.score===1)bg='#f87171';
+  return `<div class="heat-cell" style="background:${bg}" title="${d.date} · ${d.score}/6">${d.day}</div>`;
+}).join('')}
+</div>
+<div style="font-size:11px;color:#7fa88a;margin-top:6px;">红→黄→绿 表示完成度；深绿=全绿</div>
+</div>
+
+<div class="card">
+<h2>📋 每日详情</h2>
+<table><thead><tr><th>日期</th><th>睡觉</th><th>起床</th><th class="num">学习</th><th class="num">花费</th><th class="num">食物</th><th class="num">垃圾</th><th class="num">得分</th></tr></thead><tbody>
+${dayList.map(d=>`<tr>
+<td>${d.date.slice(5)} 周${['日','一','二','三','四','五','六'][parseD(d.date).getDay()]}</td>
+<td>${d.sleep?(d.sleep.success?'✓':'✗'):'—'}</td>
+<td>${d.wake?(d.wake.fitness?'✓':'✗'):'—'}</td>
+<td class="num">${d.study?d.study.hours+'h':'—'}</td>
+<td class="num">¥${d.spent.toFixed(0)}</td>
+<td class="num">${d.foodCount}</td>
+<td class="num ${d.junkCount>0?'bad':''}">${d.junkCount>0?d.junkCount:'—'}</td>
+<td class="num ${d.score>=5?'ok':(d.score<=2?'bad':'')}">${d.score}/6</td>
+</tr>`).join('')}
+</tbody></table>
+</div>
+
+<div class="card">
+<h2>💪 意志力表现</h2>
+<div class="grid" style="margin-bottom:12px">
+<div class="cell"><div class="lbl">抵抗记录</div><div class="val">${resistActions.length}</div></div>
+<div class="cell"><div class="lbl">抵抗成功率</div><div class="val">${resistRate}%</div></div>
+<div class="cell"><div class="lbl">重启记录</div><div class="val">${restartActions.length}</div></div>
+<div class="cell"><div class="lbl">重启成功率</div><div class="val">${restartRate}%</div></div>
+</div>
+${actionsInRange.length ? actionsInRange.slice(0,20).map(a=>`
+<div class="action-item ${a.result==='fail'?'fail':''}">
+<div class="head"><span>${a.date} ${a.time} · ${a.type==='resist'?'抵抗':'重启'} · 强度 ${a.intensity}</span><span>${a.result==='success'?'✓ 成功':'✗ 失败'}</span></div>
+<div class="target">${esc(a.target||'')}</div>
+<div>${(a.emotions||[]).map(e=>`<span class="tag">${esc(e)}</span>`).join('')}${(a.sources||[]).map(s=>`<span class="tag src">${esc(s)}</span>`).join('')}</div>
+${a.note?`<div style="color:#7fa88a;font-size:11.5px;margin-top:4px;font-style:italic">"${esc(a.note)}"</div>`:''}
+</div>`).join('') : '<div style="color:#7fa88a;font-size:12.5px">此周期内没有意志力记录</div>'}
+</div>
+
+${emoList.length ? `<div class="card">
+<h2>💭 情绪分布</h2>
+${emoList.map(([name, cnt]) => `<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxEmo*100}%"></div></div><span class="bar-cnt">${cnt}</span></div>`).join('')}
+</div>` : ''}
+
+${srcList.length ? `<div class="card">
+<h2>🎯 源头分布</h2>
+${srcList.map(([name, cnt]) => `<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxSrc*100}%;background:linear-gradient(90deg,#60a5fa,#3b82f6)"></div></div><span class="bar-cnt">${cnt}</span></div>`).join('')}
+</div>` : ''}
+
+<div class="card">
+<h2>💰 资金 & 饮食</h2>
+<div class="grid">
+<div class="cell"><div class="lbl">总花费</div><div class="val" style="color:#8fb0ff">¥${totalSpent.toFixed(0)}</div></div>
+<div class="cell"><div class="lbl">食物项</div><div class="val" style="color:#86efac">${totalFood}</div></div>
+<div class="cell"><div class="lbl">垃圾食品</div><div class="val" style="color:${totalJunk>0?'#fca5a5':'#86efac'}">${totalJunk}</div></div>
+<div class="cell"><div class="lbl">平均每日</div><div class="val" style="color:#8fb0ff">¥${(totalSpent/days).toFixed(0)}</div></div>
+</div>
+</div>
+
+${totalViolations > 0 ? `<div class="card">
+<h2>⚠️ 19:00 后违规记录</h2>
+${state.violations.filter(v => v.date >= startDate && v.date <= endDate).map(v => `<div class="action-item fail"><div class="head"><span>${v.date} ${v.time}</span><span>${v.isEmergency?'紧急例外':'违规'}</span></div><div>${esc(v.itemName)}</div>${v.note?`<div style="color:#7fa88a;font-size:11.5px">${esc(v.note)}</div>`:''}</div>`).join('')}
+</div>` : ''}
+
+<div class="cheer">${perfectDays >= days * 0.7 ? '🎉 太棒了！继续保持！' : perfectDays >= days * 0.4 ? '💪 稳中有进，继续加油！' : '🌱 跌倒了也要爬起来，记录本身就是进步'}</div>
+
+<div class="footer">由 自律花园 生成 · ${new Date().toLocaleString('zh-CN')}</div>
+</div></body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `自律花园_${isSmall ? '小周期' : '大周期'}报告_${today}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`已下载${title}`);
+}
+
 /* ========== 迁移 ========== */
 function migrate(){
   const def=defaultState();
   if(!state.settings)state.settings=def.settings;
   Object.keys(def.settings).forEach(k=>{if(state.settings[k]===undefined)state.settings[k]=def.settings[k];});
   if(state.enabled===undefined)state.enabled=false;
+  if(state.activated===undefined)state.activated=!!state.settings.startDate;
   if(!state.records)state.records={};
   if(!state.cats)state.cats=def.cats;
   if(!state.tags)state.tags=def.tags;
@@ -1719,17 +1948,266 @@ function migrate(){
   if(!state.rewardCards)state.rewardCards=[];
   if(!state.violations)state.violations=[];
 }
+/* ========== 倒计时 & 解锁动画（覆盖版） ========== */
+function showActivationScreen(){
+  let el=document.getElementById('activationScreen');if(el)el.remove();
+  el=document.createElement('div');el.id='activationScreen';el.className='activation-screen';
+  const now=new Date();
+  const nowDate=fmtDate(now);
+  const nowTime=`${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  el.innerHTML=`<div class="activation-card">
+    <div class="logo">🌱</div>
+    <h1>自律花园</h1>
+    <div class="sub">正式版 · 一次性启用 · 严格跟随北京时间</div>
+    <div class="activation-rules">
+      <h3>启用前请仔细阅读</h3>
+      <ul>
+        <li>启用后，起始时间锁定为你选择的时刻</li>
+        <li>系统将<b>严格跟随北京时间</b>运行</li>
+        <li class="warn"><b>一旦启用，不可停止、不可重置、不可反悔</b></li>
+        <li>数据保存在云端，可跨设备同步</li>
+      </ul>
+    </div>
+    <label class="fl" style="font-size:12.5px;color:var(--muted);margin-bottom:6px;display:block;">📅 起始日期</label>
+    <input class="txt" type="date" id="actStartDate" value="${nowDate}" min="${nowDate}" style="margin-bottom:12px;">
+    <label class="fl" style="font-size:12.5px;color:var(--muted);margin-bottom:6px;display:block;">⏰ 起始时间（倒计时归零时系统自动开启）</label>
+    <input class="txt" type="time" id="actStartTime" value="${nowTime}" style="margin-bottom:16px;">
+    <label class="fl" style="font-size:12.5px;color:var(--muted);margin-bottom:6px;display:block;">🎂 你的生日（可选）</label>
+    <input class="txt" type="date" id="actBirthday" style="margin-bottom:16px;">
+    <label class="activation-check">
+      <input type="checkbox" id="actAgree">
+      <span class="lbl">我已了解以上规则，确认<b>一次性启用</b>自律花园，并接受不可停止的约束。</span>
+    </label>
+    <button class="activation-btn" id="actBtn" disabled>启用系统</button>
+    <div class="hint" style="text-align:center;margin-top:14px;">启用后，这个页面不会再出现</div>
+  </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#actAgree').onchange=e=>{el.querySelector('#actBtn').disabled=!e.target.checked;};
+  el.querySelector('#actBtn').onclick=()=>{
+    const sd=el.querySelector('#actStartDate').value;
+    const st=el.querySelector('#actStartTime').value;
+    if(!sd||!st){ toast('请选择起始日期和时间'); return; }
+    const startTs=new Date(sd+'T'+st+':00').getTime();
+    if(isNaN(startTs)){ toast('时间格式有误'); return; }
+    pushUndo('启用系统');
+    state.enabled=true;
+    state.activated=true;
+    state.settings.startDate=sd;
+    state.settings.startTimestamp=startTs;
+    state.settings.unlockAnimationPlayed=false;
+    const bd=el.querySelector('#actBirthday').value;
+    if(bd) state.settings.birthday=bd;
+    state.createdAt=new Date().toISOString();
+    saveState();
+    el.remove();
+    render(false);
+    setTimeout(()=>cloudPush(true),500);
+    if(startTs>Date.now()){ toast('⏳ 系统将在你选择的时刻解锁'); }
+    else { toast('🌱 系统已启用'); }
+  };
+}
 
+function render(preserve){
+  if(!state)state=defaultState();
+  checkStreakTimeout();
+  const notActivated = !state.enabled || !state.settings.startDate;
+  if(notActivated){
+    document.body.classList.remove('cold','rest','bd-celebration');
+    document.querySelector('.app').style.display='none';
+    const cd=document.getElementById('countdownScreen'); if(cd) cd.remove();
+    showActivationScreen();
+    return;
+  }
+  const startTs = state.settings.startTimestamp;
+  if(startTs && Date.now() < startTs){
+    document.querySelector('.app').style.display='none';
+    const act=document.getElementById('activationScreen'); if(act) act.remove();
+    if(!document.getElementById('countdownScreen')) showCountdownScreen();
+    return;
+  }
+  const cd=document.getElementById('countdownScreen'); if(cd) cd.remove();
+  document.querySelector('.app').style.display='block';
+  autoCheckJJRelease();
+  if(preserve!==false)scrollPos=window.scrollY;
+  updateUndoBtn();
+  const v=$('#view');if(!v)return;
+  try{
+    if(activeTab==='home')v.innerHTML=viewHome();
+    else if(activeTab==='record')v.innerHTML=viewRecord();
+    else if(activeTab==='willpower')v.innerHTML=viewWillpower();
+    else if(activeTab==='emotion')v.innerHTML=viewEmotion();
+    else if(activeTab==='finance')v.innerHTML=viewFinance();
+    else if(activeTab==='diet')v.innerHTML=viewDiet();
+    else if(activeTab==='me')v.innerHTML=viewMe();
+  }catch(err){console.error(err);v.innerHTML=`<div class="alert danger"><span class="ico">⚠</span><div><b>渲染出错</b><p>${esc(err.message)}</p></div></div>`;}
+  renderDateNav();renderTabbar();applyTheme();spawnWeather();
+  if(preserve!==false)window.scrollTo(0,scrollPos);
+  setTimeout(checkPrompts,400);
+  if(state.settings.unlockAnimationPlayed===false && state.settings.startTimestamp && Date.now()>=state.settings.startTimestamp){
+    setTimeout(()=>playUnlockSequence(), 400);
+  }
+}
+
+function showCountdownScreen(){
+  let el=document.getElementById('countdownScreen');if(el)el.remove();
+  el=document.createElement('div');el.id='countdownScreen';el.className='countdown-screen';
+  el.innerHTML=`
+    <div class="cd-stars"></div>
+    <div class="cd-content">
+      <div class="cd-title">🌱 自律花园即将开启</div>
+      <div class="cd-sub">倒计时结束 · 新旅程开启</div>
+      <div class="cd-timer">
+        <div class="cd-block"><div class="cd-num" id="cdDay">00</div><div class="cd-lbl">天</div></div>
+        <div class="cd-block"><div class="cd-num" id="cdHour">00</div><div class="cd-lbl">时</div></div>
+        <div class="cd-block"><div class="cd-num" id="cdMin">00</div><div class="cd-lbl">分</div></div>
+        <div class="cd-block"><div class="cd-num" id="cdSec">00</div><div class="cd-lbl">秒</div></div>
+      </div>
+      <div class="cd-quote" id="cdQuote">每一步都算数</div>
+      <div class="cd-tip">在这之前，好好准备。等你回来。</div>
+    </div>`;
+  document.body.appendChild(el);
+  const quotes=['每一步都算数','行动是最好的答案','你比想象中更强大','未来会感谢今天的你','不必完美，只需开始','坚持是最美的姿态'];
+  let qi=0;
+  const quoteEl=document.getElementById('cdQuote');
+  const quoteTimer=setInterval(()=>{
+    qi=(qi+1)%quotes.length;
+    quoteEl.style.opacity=0;
+    setTimeout(()=>{quoteEl.textContent=quotes[qi];quoteEl.style.opacity=1;},300);
+  },4000);
+  const startTs=state.settings.startTimestamp;
+  const tickTimer=setInterval(()=>{
+    const diff=startTs-Date.now();
+    if(diff<=0){
+      clearInterval(quoteTimer);clearInterval(tickTimer);
+      triggerUnlockAnimation();
+      return;
+    }
+    const totalSec=Math.floor(diff/1000);
+    const d=Math.floor(totalSec/86400);
+    const h=Math.floor((totalSec%86400)/3600);
+    const m=Math.floor((totalSec%3600)/60);
+    const s=totalSec%60;
+    const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=pad2(v);};
+    setTxt('cdDay',d);setTxt('cdHour',h);setTxt('cdMin',m);setTxt('cdSec',s);
+  },1000);
+  tickTimer();
+}
+
+function triggerUnlockAnimation(){
+  const el=document.getElementById('countdownScreen');
+  if(el) el.classList.add('cracking');
+  spawnCrackFireworks();
+  setTimeout(()=>{
+    if(el) el.remove();
+    document.querySelector('.app').style.display='block';
+    playUnlockSequence();
+  },1200);
+}
+
+function spawnCrackFireworks(){
+  const colors=['#4ade80','#fbbf24','#60a5fa','#a78bfa','#f472b6'];
+  for(let i=0;i<60;i++){
+    const ang=(i/60)*Math.PI*2;
+    const dist=100+Math.random()*220;
+    const p=document.createElement('div');
+    p.className='firework';
+    p.style.left='50%';p.style.top='50%';
+    p.style.color=colors[i%5];
+    p.style.setProperty('--fx',(Math.cos(ang)*dist).toFixed(0)+'px');
+    p.style.setProperty('--fy',(Math.sin(ang)*dist).toFixed(0)+'px');
+    p.style.width='8px';p.style.height='8px';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),2200);
+  }
+}
+
+function playUnlockSequence(){
+  const welcome=document.createElement('div');
+  welcome.className='unlock-welcome';
+  welcome.innerHTML=`<div class="uw-main">🌱 系统已开启</div><div class="uw-sub">愿你从此，与更好的自己相遇</div>`;
+  document.body.appendChild(welcome);
+  setTimeout(()=>welcome.classList.add('show'),100);
+  const topbar=document.querySelector('.topbar');
+  if(topbar){topbar.style.opacity=0;topbar.style.transition='opacity .6s';setTimeout(()=>{topbar.style.opacity=1;},400);}
+  const tabs=document.querySelectorAll('.tab');
+  tabs.forEach((tab,i)=>{
+    tab.style.opacity=0;tab.style.transform='translateY(20px) scale(0.8)';
+    setTimeout(()=>{
+      tab.style.transition='all .5s cubic-bezier(.34,1.56,.64,1)';
+      tab.style.opacity=1;tab.style.transform='translateY(0) scale(1)';
+      const rect=tab.getBoundingClientRect();
+      smallFirework(rect.left+rect.width/2, rect.top+rect.height/2);
+    },800+i*180);
+  });
+  const view=document.querySelector('#view');
+  if(view){view.style.opacity=0;view.style.transition='opacity .8s';setTimeout(()=>{view.style.opacity=1;},1800);}
+  setTimeout(()=>{welcome.classList.remove('show');setTimeout(()=>welcome.remove(),600);},3000);
+  state.settings.unlockAnimationPlayed=true;
+  saveState();
+  setTimeout(()=>cloudPush(true),100);
+}
+
+function smallFirework(x,y){
+  for(let i=0;i<10;i++){
+    const ang=(i/10)*Math.PI*2;
+    const dist=20+Math.random()*30;
+    const p=document.createElement('div');
+    p.className='firework';
+    p.style.left=x+'px';p.style.top=y+'px';
+    p.style.color='#4ade80';
+    p.style.setProperty('--fx',(Math.cos(ang)*dist).toFixed(0)+'px');
+    p.style.setProperty('--fy',(Math.sin(ang)*dist).toFixed(0)+'px');
+    p.style.width='5px';p.style.height='5px';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1400);
+  }
+}
+
+function migrate(){
+  const def=defaultState();
+  if(!state.settings)state.settings=def.settings;
+  Object.keys(def.settings).forEach(k=>{if(state.settings[k]===undefined)state.settings[k]=def.settings[k];});
+  if(state.settings.startTimestamp===undefined)state.settings.startTimestamp=state.settings.startDate?parseD(state.settings.startDate).getTime():0;
+  if(state.settings.unlockAnimationPlayed===undefined)state.settings.unlockAnimationPlayed=!!state.settings.startDate;
+  if(state.enabled===undefined)state.enabled=false;
+  if(state.activated===undefined)state.activated=!!state.settings.startDate;
+  if(!state.records)state.records={};
+  if(!state.cats)state.cats=def.cats;
+  if(!state.tags)state.tags=def.tags;
+  if(!state.expenses)state.expenses=[];
+  if(state.budget===undefined)state.budget=def.budget;
+  if(!state.cards)state.cards=def.cards;
+  if(!state.stats)state.stats=def.stats;
+  if(!state.trees)state.trees=[];
+  if(!state.birthdayCard)state.birthdayCard=def.birthdayCard;
+  if(!state.jj)state.jj=def.jj;
+  if(!state.restReschedule)state.restReschedule={};
+  if(!state.restResolved)state.restResolved={};
+  if(!state.restPrompted)state.restPrompted={};
+  if(!state.editLog)state.editLog=[];
+  if(!state.actions)state.actions=[];
+  if(!state.resistStreak)state.resistStreak=def.resistStreak;
+  if(!state.restartStreak)state.restartStreak=def.restartStreak;
+  if(!state.rewardCards)state.rewardCards=[];
+  if(!state.violations)state.violations=[];
+}
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
   if(raw){try{state=JSON.parse(raw);}catch(e){state=defaultState();}}
   else{state=defaultState();}
   migrate();
-  autoCheckWakeFail();
+  // 修复：只有已有 startDate 才做唤醒检查
+  if(state.enabled && state.settings.startDate){
+    autoCheckWakeFail();
+  }
   render(false);
   booted=true;
-  setTimeout(()=>{cloudPull(false).then(res=>{if(res.pulled)render(false);});},300);
+  setTimeout(()=>{
+    cloudPull(false).then(res=>{
+      if(res.pulled)render(false);
+    });
+  },300);
 })();
 </script>
 </body>
