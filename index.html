@@ -2366,7 +2366,7 @@ function viewMe(){
 }
 
 /* 报告下载限制（覆盖原函数） */
-const _origDownloadReport = downloadReport;
+var _origDownloadReport = downloadReport;
 function downloadReport(type){
   const sch=computeSchedule();const info=sch[todayStr()]||{};
   if(type==='small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
@@ -2555,7 +2555,7 @@ function viewMe(){
 }
 
 /* 报告下载限制（拦截原函数） */
-const _origDownloadReport = downloadReport;
+var _origDownloadReport = downloadReport;
 window.downloadReport = function(type){
   const sch=computeSchedule();const info=sch[todayStr()]||{};
   if(type==='small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
