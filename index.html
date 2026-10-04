@@ -3014,6 +3014,60 @@ function viewCalendar(){
     <div class="hint" style="margin-top:8px;">可往后翻查看未来排程。冷静期会显示冰冻标记。</div>
   </div>`;
 }
+  /* ========== v9：手动休息日改为按日期定位（10-09 优先，遇冷静期顺延） ========== */
+(function(){
+  var _prevCS9 = computeSchedule;
+  computeSchedule = function(){
+    var result = _prevCS9();
+    // 1. 撤销之前补丁（v6/v7）对"手动休息日"的标记
+    for(var k in result){
+      if(result[k].isManualRest){
+        var di = result[k];
+        var origType = (k < todayStr()) ? 'green' : 'future';
+        result[k] = Object.assign({}, di, {
+          type: origType,
+          isRest: false,
+          isRestConfirmed: false,
+          isManualRest: false,
+          isRestCandidate: false
+        });
+      }
+    }
+    // 2. 从 10-09 起，往后找第一个"非冷静日"作为休息日
+    var plan = state.settings && state.settings.manualRestPlan;
+    if(!plan || !plan.date) return result;
+    var planD = parseD(plan.date);
+    for(var i = 0; i < 30; i++){
+      var key = fmtDate(addDays(planD, i));
+      if(!result[key]) break;
+      var d = result[key];
+      // 冷静期跳过
+      if(d.type === 'cooldown' || d.type === 'future-cooldown') continue;
+      // 已经是休息日就不重复
+      if(d.isRest) break;
+      // 标记为休息日
+      result[key] = Object.assign({}, d, {
+        type: 'rest',
+        isRest: true,
+        isManualRest: true,
+        isRestConfirmed: true,
+        isReward: false,
+        isMealDay: false,
+        isRestCandidate: false,
+        cooldownRemaining: 0,
+        isJJRelease: false,
+        cooldownBreakdown: null
+      });
+      break;
+    }
+    return result;
+  };
+  var _origMigrateV9 = migrate;
+  migrate = function(){
+    _origMigrateV9();
+    if(state.settings) state.settings.manualRestPlan = { date: '2026-10-09' };
+  };
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
