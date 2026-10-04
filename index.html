@@ -171,12 +171,12 @@ body.bd-celebration .toast{background:rgba(61,16,16,.98);border-color:rgba(255,2
 body.cold .btn-p,body.rest .btn-p,body.bd-celebration .btn-p{color:#fff}
 body.bd-celebration .btn-p{background:linear-gradient(135deg,#ff4d4d,#ff8833)}
 .btn-g{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
-.btn-d{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.25)}
 .btn-sm{padding:8px 12px;font-size:12px;width:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:6px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;position:relative;user-select:none}
 .chip:active{transform:scale(.95)}
+.chip.on{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.5);color:var(--accent);font-weight:500}
 .chip.junk{border-color:rgba(248,113,113,.4);color:#fca5a5}
 .chip .price{font-size:10px;opacity:.6;margin-left:4px}
 .chip .cat{font-size:10px;opacity:.6;margin-left:4px}
@@ -310,19 +310,37 @@ function inSleepWindow(){const m=nowMin();return m>=SLEEP_WINDOW.start||m<SLEEP_
 function inWakeWindow(){const m=nowMin();return m>=WAKE_WINDOW.start&&m<WAKE_WINDOW.end}
 
 /* ========== 状态 ========== */
-const LS_STATE='garden_v16_official';
+const LS_STATE='garden_v17_local';
 let state=null,undoStack=[],activeTab='home',calCursor=null,scrollPos=0;
+
+/* ========== 云同步配置（纯 fetch，无 CDN 依赖） ========== */
+const SUPABASE_URL = 'https://fbwwylbqovbzjhgcolzd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0';
+const SYNC_ID_KEY  = 'garden_sync_user_id_v1';
+const LAST_CHANGE_KEY = 'garden_last_change_v1';
+
+let syncUserId = localStorage.getItem(SYNC_ID_KEY);
+let isFirstVisit = false;
+if(!syncUserId){
+  syncUserId = 'garden_' + Math.random().toString(36).substring(2, 10);
+  localStorage.setItem(SYNC_ID_KEY, syncUserId);
+  isFirstVisit = true;
+}
+let cloudSyncTimeout = null;
+let lastLocalChange = parseInt(localStorage.getItem(LAST_CHANGE_KEY) || '0', 10) || 0;
+let booted = false;
+let suppressSync = false;
+let syncStatusType = 'idle';
+let syncStatusText = '正在连接云端…';
 
 function defaultState(){
   return {
-    version:16,
+    version:17,
     enabled:false,
     settings:{startDate:'',sleepDeadline:'23:30',wakeDeadline:'05:20',birthday:'',editLimitPerMonth:3,jjInitial:10,jjIncrement:5},
     birthdayCard:{used:false,usedDate:'',delayDate:'',delayResolved:false,prompted:false},
     records:{},
-    // 唯一支出流水
     expenses:[],
-    // 大类：isFood → 进入饮食板块；isJunk → 触发异常
     cats:[
       {id:'c_normal',name:'正常用餐',color:'#4ade80',isFood:true, isJunk:false},
       {id:'c_fruit', name:'水果',    color:'#fbbf24',isFood:true, isJunk:false},
@@ -349,23 +367,128 @@ function defaultState(){
     trees:[],editLog:[],restReschedule:{},restResolved:{},restPrompted:{}
   };
 }
-function saveState(s){try{localStorage.setItem(LS_STATE,JSON.stringify(state))}catch(e){if(!s)toast('存储失败')}}
+
+function setSyncStatus(type, msg){
+  syncStatusType = type;
+  syncStatusText = msg;
+}
+
+function scheduleCloudSync(){
+  if(cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+  cloudSyncTimeout = setTimeout(function(){ cloudPush(true); }, 2000);
+}
+
+function cloudPush(silent){
+  if(!state || !state.enabled){
+    if(!silent) setSyncStatus('warn', '系统尚未启用，暂不上传');
+    return Promise.resolve({ ok: false });
+  }
+  if(!silent) setSyncStatus('warn', '正在上传到云端…');
+  const payload = {
+    user_id: syncUserId,
+    items: { __type: 'garden', version: state.version || 17, state: state },
+    remedy_pool: [],
+    sim_date: todayStr(),
+    updated_at: new Date().toISOString()
+  };
+  return fetch(SUPABASE_URL + '/rest/v1/user_data?on_conflict=user_id', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify([payload])
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ throw new Error(t); });
+    if(!silent){
+      const t = new Date();
+      setSyncStatus('ok', '已上传 · ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()));
+    }
+    return { ok: true };
+  }).catch(function(e){
+    if(!silent) setSyncStatus('err', '上传失败：' + (e.message || e));
+    return { ok: false, error: e };
+  });
+}
+
+function cloudPull(silent){
+  if(!silent) setSyncStatus('warn', '正在从云端下载…');
+  return fetch(SUPABASE_URL + '/rest/v1/user_data?user_id=eq.' + encodeURIComponent(syncUserId), {
+    method: 'GET',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ throw new Error(t); });
+    return res.json();
+  }).then(function(data){
+    if(!data || data.length === 0){
+      if(state && state.enabled){ cloudPush(true); }
+      setSyncStatus('ok', '云端暂无数据，已上传本机数据');
+      return { pulled: false };
+    }
+    const row = data[0];
+    const cloudTime = new Date(row.updated_at).getTime();
+    const payload = row.items;
+
+    if(!payload || typeof payload !== 'object' || payload.__type !== 'garden' || !payload.state){
+      if(state && state.enabled) cloudPush(true);
+      setSyncStatus('warn', '云端数据格式不匹配，已用本机覆盖');
+      return { pulled: false };
+    }
+
+    const localEmpty = !state || !state.enabled;
+    if(localEmpty || cloudTime > lastLocalChange + 1500){
+      suppressSync = true;
+      state = payload.state;
+      try{ migrate(); }catch(e){ console.error(e); }
+      try{ localStorage.setItem(LS_STATE, JSON.stringify(state)); }catch(e){}
+      lastLocalChange = cloudTime;
+      try{ localStorage.setItem(LAST_CHANGE_KEY, String(lastLocalChange)); }catch(e){}
+      suppressSync = false;
+      render(false);
+      setSyncStatus('ok', '已从云端恢复 · ' + new Date(cloudTime).toLocaleString('zh-CN'));
+      return { pulled: true };
+    }
+
+    if(lastLocalChange > cloudTime + 1500){
+      cloudPush(true);
+      setSyncStatus('ok', '本机数据较新，已上传');
+    }else{
+      setSyncStatus('ok', '本机与云端一致');
+    }
+    return { pulled: false };
+  }).catch(function(e){
+    setSyncStatus('err', '下载失败：' + (e.message || e));
+    return { pulled: false, error: e };
+  });
+}
+
+function saveState(silent){
+  if(!state) return;
+  state.updatedAt = new Date().toISOString();
+  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {
+    if(!silent) toast('本地存储失败');
+  }
+  if(!booted || suppressSync) return;
+  if(!state || !state.enabled) return;
+  lastLocalChange = Date.now();
+  try{ localStorage.setItem(LAST_CHANGE_KEY, String(lastLocalChange)); }catch(e){}
+  scheduleCloudSync();
+}
+
 function pushUndo(l){try{undoStack.push({label:l,snap:JSON.stringify(state)})}catch(e){};if(undoStack.length>12)undoStack.shift();updateUndoBtn()}
 function doUndo(){const it=undoStack.pop();if(!it){toast('没有可撤销的操作');return}state=JSON.parse(it.snap);saveState(true);updateUndoBtn();render();toast('已撤销：'+it.label)}
 function updateUndoBtn(){const b=$('#undoBtn');if(!b)return;b.classList.toggle('on',undoStack.length>0);b.textContent=undoStack.length?'↶'+undoStack.length:'↶'}
 function getRecord(d){if(!state.records[d])state.records[d]={};return state.records[d]}
 
-/* ========== 大类/标签/支出 派生 ========== */
 function getCat(id){return state.cats.find(c=>c.id===id)||{name:'已删除',color:'#64748b',isFood:false,isJunk:false}}
 function getTag(id){return state.tags.find(t=>t.id===id)}
 function getDayExpenses(d){return state.expenses.filter(e=>e.date===d)}
 function getDayFoods(d){return state.expenses.filter(e=>e.date===d && getCat(e.catId).isFood)}
-// 用钱达标：没有 isJunk 的支出
 function isMoneyOk(d){return !getDayExpenses(d).some(e=>getCat(e.catId).isJunk)}
-// 饮食达标：没有 isJunk 的食物支出
 function isDietOk(d){return !getDayFoods(d).some(e=>getCat(e.catId).isJunk)}
 
-/* ========== 自动失败检查 ========== */
 function autoCheckWakeFail(){
   const today=todayStr();const r=state.records[today];
   if(r&&r.wake&&r.wake.checked)return;
@@ -397,7 +520,6 @@ function getStudyCooldown(tier){if(tier==='cool1')return 1;if(tier==='cool2')ret
 function getDayCooldown(rec,dateKey){
   let total=0;const breakdown=[];
   if(rec.study&&rec.study.tier&&rec.study.tier.startsWith('cool')){const d=getStudyCooldown(rec.study.tier);total+=d;breakdown.push({name:'学习'+rec.study.hours+'h',days:d});}
-  // 用钱/饮食从 expenses 派生
   if(!isDietOk(dateKey)){total+=2;breakdown.push({name:'饮食异常（垃圾食品）',days:2});}
   else if(!isMoneyOk(dateKey)){total+=1;breakdown.push({name:'用钱异常',days:1});}
   if(rec.jingji&&rec.jingji.checked&&rec.jingji.ok===false){total+=2;breakdown.push({name:'养精蓄锐破戒',days:2});}
@@ -424,7 +546,6 @@ function isGreenForCycle(rec,dateKey,isJJReleaseDay){
   return !!(sleepOk&&wakeOk&&studyOk&&moneyOk&&dietOk&&jjOk);
 }
 
-/* ========== 核心推演 ========== */
 function computeSchedule(){
   const result={};const today=todayStr();
   const startDateStr=state.settings.startDate||today;
@@ -471,7 +592,6 @@ function computeSchedule(){
   return result;
 }
 
-/* ========== 判定 ========== */
 function judgeStudy(h,isReward){
   if(isReward){if(h>=7)return{tier:'normal',label:'正常',msg:'奖励日 ≥7h'};if(h>=6)return{tier:'cool1',label:'冷静1天',msg:'奖励日 6-7h'};return{tier:'cool2',label:'冷静2天',msg:'奖励日 <6h'};}
   if(h>=10)return{tier:'reward',label:'奖励加餐',msg:'≥10h，今晚可加餐'};
@@ -511,7 +631,7 @@ function showActivationScreen(){
         <li>系统将<b>严格跟随北京时间</b>运行，无法手动切换日期</li>
         <li class="warn"><b>一旦启用，不可停止、不可重置、不可反悔</b></li>
         <li>所有打卡、冷静期、奖励日、休息日将从今天开始真实推演</li>
-        <li>数据保存在本机浏览器，建议每周导出一次备份</li>
+        <li>数据保存在云端，可跨设备同步，建议同时导出本地备份</li>
       </ul>
     </div>
     <div class="activation-today">
@@ -828,7 +948,7 @@ function getDayItems(rec,info,dateKey){
 }
 function treeIcon(t){const m={grass:'🌱',pine:'🌲',cherry:'🌸',maple:'🍁',ginkgo:'🍂',oak:'🌳',willow:'🌿',peach:'🍑',crystal:'💎',world:'🌟',dead:'🥀'};return m[t]||'🌳';}
 
-/* ========== 日历（只读过去和今天） ========== */
+/* ========== 日历 ========== */
 function viewCalendar(){
   if(!calCursor){const d=parseD(todayStr());calCursor={y:d.getFullYear(),m:d.getMonth()}}
   const{y,m}=calCursor;
@@ -886,7 +1006,7 @@ function viewCalendar(){
   </div>`;
 }
 
-/* ========== 记录页（含所有管理） ========== */
+/* ========== 记录页 ========== */
 function viewRecord(){
   const today=todayStr();
   const rec=getRecord(today);const sch=computeSchedule();const info=sch[today]||{};
@@ -903,7 +1023,6 @@ function viewRecord(){
   const todayExpenses=getDayExpenses(today);
   const todayFoods=getDayFoods(today);
   const moneyOk=isMoneyOk(today);const dietOk=isDietOk(today);
-  // 五项核心：睡觉、起床、学习、用钱、饮食、养精蓄锐（健身选做）
   const allCoreChecked=sleepChecked&&wakeChecked&&studyChecked&&todayExpenses.length>0&&jjEffective;
   const canSleep=inSleepWindow();const canWake=inWakeWindow();
   const jj=state.jj;const jjProgress=jj.cycleLength>0?(jj.current/jj.cycleLength*100):0;
@@ -939,7 +1058,6 @@ function viewRecord(){
     </div>
   </div>
 
-  <!-- 用钱板块（包含用钱记录、饮食判定） -->
   <div class="card">
     <div class="card-t"><h3>用钱 / 饮食</h3><span class="sub">今日已花 ¥${todaySpent.toFixed(2)}</span></div>
     <div class="hint" style="margin-bottom:8px;">点标签加到待记录。提交后自动同步到资金和饮食板块。</div>
@@ -960,7 +1078,6 @@ function viewRecord(){
     ${pending.length>0?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px;color:#fca5a5;" data-act="clear-pending">清空待记录</button>`:''}
   </div>
 
-  <!-- 今日明细 -->
   <div class="card">
     <div class="card-t"><h3>今日明细</h3><span class="sub">${todayExpenses.length} 笔</span></div>
     ${todayExpenses.length>0?todayExpenses.map(e=>{
@@ -984,7 +1101,6 @@ function viewRecord(){
     `:''}
   </div>
 
-  <!-- 养精蓄锐 -->
   <div class="card">
     <div class="task ${(jjChecked||isJJRelease)?'checked':''} ${jjChecked&&!rec.jingji.ok?'failed':''} ${isJJRelease&&!jjChecked?'auto':''}">
       <div class="task-head"><div class="task-icon">🧘</div><div class="task-title"><h4>养精蓄锐</h4><p>第 ${jj.current}/${jj.cycleLength} 天${isJJRelease?' · 💧 释放日':''}</p></div></div>
@@ -997,7 +1113,6 @@ function viewRecord(){
   ${allCoreChecked&&confirmed?`<div class="card" style="text-align:center;color:#86efac;font-size:13px;">今天已确认 ✓</div>`:''}
   ${editMode&&!confirmed?`<div class="card" style="background:rgba(251,191,36,.08)"><div class="hint" style="margin-bottom:8px;color:var(--gold);">修改模式</div><button class="btn btn-p" data-act="openConfirm">✓ 重新核对</button></div>`:''}
 
-  <!-- 大类管理 -->
   <div class="card">
     <div class="card-t"><h3>大类管理</h3><button class="btn btn-p btn-sm" data-act="add-cat">＋ 新增大类</button></div>
     <div class="hint" style="margin-bottom:8px;">「食物」大类进入饮食板块统计，「垃圾」大类会触发饮食异常。</div>
@@ -1012,7 +1127,6 @@ function viewRecord(){
     }).join('')}
   </div>
 
-  <!-- 标签管理 -->
   <div class="card">
     <div class="card-t"><h3>标签管理</h3><button class="btn btn-p btn-sm" data-act="add-tag">＋ 新增标签</button></div>
     <div class="hint" style="margin-bottom:8px;">点标签可改名称、价格、所属大类。</div>
@@ -1134,7 +1248,7 @@ function viewFinance(){
   </div>`;
 }
 
-/* ========== 饮食板块（只读 + 可视化） ========== */
+/* ========== 饮食板块 ========== */
 function viewDiet(){
   const today=todayStr();
   const todayFoods=getDayFoods(today);
@@ -1212,6 +1326,37 @@ function viewMe(){
     <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--muted);">已运行</span><span style="color:var(--accent);font-weight:600;">${daysSince} 天</span></div>
     <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--muted);">状态</span><span style="color:var(--accent);font-weight:600;">● 运行中</span></div>
   </div>
+  <div class="card">
+    <div class="card-t">
+      <h3>☁ 云同步</h3>
+      <span class="sub" id="syncStatus" style="color:${
+        syncStatusType==='ok' ? '#86efac' :
+        syncStatusType==='err' ? '#fca5a5' :
+        syncStatusType==='warn' ? '#fde68a' : 'var(--muted)'
+      }">${esc(syncStatusText)}</span>
+    </div>
+    <label class="fl">你的同步码（请复制保存到安全的地方）</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input class="txt" id="syncCodeDisplay" value="${esc(syncUserId)}" readonly
+             style="font-family:ui-monospace,Menlo,monospace;font-size:13px;flex:1;">
+      <button class="btn btn-g btn-sm" style="width:auto;padding:10px 14px;" data-act="copySyncCode">复制</button>
+    </div>
+    <label class="fl">在新设备输入同步码（会覆盖本机数据）</label>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input class="txt" id="inputSyncCode" placeholder="garden_xxxxxxxx" style="flex:1;">
+      <button class="btn btn-p btn-sm" style="width:auto;padding:10px 14px;" data-act="switchSyncCode">切换</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-p" style="flex:1;" data-act="cloudPushBtn">☁ 立即上传</button>
+      <button class="btn btn-g" style="flex:1;" data-act="cloudPullBtn">⬇ 立即下载</button>
+    </div>
+    <div class="hint" style="margin-top:10px;line-height:1.7;">
+      · 每次打卡 / 记录后 2 秒自动上传<br>
+      · 换设备时输入同一个同步码即可恢复<br>
+      · 同步码丢失将无法找回云端数据，请务必备份<br>
+      · 每次打开请用同一个正式网址访问
+    </div>
+  </div>
   <div class="card"><div class="card-t"><h3>初始设置</h3><span class="sub">本月可修改 ${Math.max(0,state.settings.editLimitPerMonth-editsThisMonth)} 次</span></div>
     <label class="fl">生日日期</label>
     <input class="txt" type="date" id="setBirthday" value="${state.settings.birthday||''}">
@@ -1254,9 +1399,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act],[data-date],[data-checkin],[data-reset],[data-add-tag],[data-jj-set],[data-sleep-reason],[data-card],[data-rm-tag],[data-edit-tag],[data-rm-cat],[data-edit-cat],[data-rm-pending],[data-rm-expense],[data-future]');
   if(!el)return;
   if(el.dataset.future!==undefined){toast('不能查看未来的日期');return}
-  // 删除待记录
   if(el.dataset.rmPending!==undefined){e.stopPropagation();const today=todayStr();const r=getRecord(today);if(r._moneyPending)r._moneyPending=r._moneyPending.filter(p=>p.id!==el.dataset.rmPending);saveState();render();return}
-  // 删除已提交支出
   if(el.dataset.rmExpense!==undefined){
     e.stopPropagation();
     if(confirm('删除这条记录？')){
@@ -1266,7 +1409,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 点击标签（记录页加到 pending）
   if(el.dataset.addTag!==undefined){
     const tag=getTag(el.dataset.addTag);if(!tag)return;
     const today=todayStr();const r=getRecord(today);
@@ -1277,7 +1419,6 @@ document.addEventListener('click',e=>{
     toast(`已添加：${tag.name} ¥${tag.price}${cat.isJunk?' ⚠':''}`);
     return;
   }
-  // 删除标签
   if(el.dataset.rmTag!==undefined){
     e.stopPropagation();
     const t=getTag(el.dataset.rmTag);
@@ -1287,7 +1428,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 编辑标签
   if(el.dataset.editTag!==undefined && !e.target.closest('[data-rm-tag]')){
     const tag=getTag(el.dataset.editTag);if(!tag)return;
     openSheet(`
@@ -1325,7 +1465,6 @@ document.addEventListener('click',e=>{
     });
     return;
   }
-  // 删除大类（连带删标签）
   if(el.dataset.rmCat!==undefined){
     const id=el.dataset.rmCat;const cat=getCat(id);
     const cnt=state.tags.filter(t=>t.catId===id).length;
@@ -1337,7 +1476,6 @@ document.addEventListener('click',e=>{
     }
     return;
   }
-  // 编辑大类
   if(el.dataset.editCat!==undefined){
     const cat=getCat(el.dataset.editCat);
     openSheet(`
@@ -1387,7 +1525,6 @@ document.addEventListener('click',e=>{
     });
     return;
   }
-  // 打卡相关
   if(el.dataset.checkin!==undefined){doCheckin(el.dataset.checkin);return}
   if(el.dataset.reset!==undefined){const r=getRecord(todayStr());if(r[el.dataset.reset])delete r[el.dataset.reset];saveState();render();toast('已重置');return}
   if(el.dataset.jjSet!==undefined){const r=getRecord(todayStr());r._jjPending=el.dataset.jjSet;saveState();render();return}
@@ -1512,6 +1649,42 @@ document.addEventListener('click',e=>{
     const input=document.createElement('input');input.type='file';input.accept='.json';
     input.onchange=()=>{const f=input.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{try{const data=JSON.parse(fr.result);if(!confirm('导入将覆盖当前全部数据，确定？'))return;pushUndo('导入数据');state=Object.assign(defaultState(),data);saveState();render();toast('导入成功');}catch(err){toast('文件格式错误')}};fr.readAsText(f);};
     input.click();return;
+  }
+  if(act==='copySyncCode'){
+    const txt = syncUserId;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ toast('同步码已复制：' + txt); })
+        .catch(function(){ toast('复制失败，请手动复制'); });
+    }else{
+      const inp = $('#syncCodeDisplay');
+      if(inp){ inp.select(); try{ document.execCommand('copy'); toast('同步码已复制'); }catch(e){ toast('请手动复制：' + txt); } }
+    }
+    return;
+  }
+  if(act==='switchSyncCode'){
+    const input = $('#inputSyncCode');
+    if(!input || !input.value.trim()){ toast('请输入同步码'); return; }
+    const newId = input.value.trim();
+    if(newId === syncUserId){ toast('这与当前同步码相同'); return; }
+    if(!confirm('即将用同步码 ' + newId + ' 的数据覆盖本机，确定继续？')) return;
+    syncUserId = newId;
+    localStorage.setItem(SYNC_ID_KEY, syncUserId);
+    render(false);
+    cloudPull(false).then(function(res){
+      if(res.pulled) toast('已恢复数据');
+      else toast('已切换同步码');
+      render(false);
+    });
+    return;
+  }
+  if(act==='cloudPushBtn'){ cloudPush(false).then(function(){ render(false); }); return; }
+  if(act==='cloudPullBtn'){
+    cloudPull(false).then(function(res){
+      if(res.pulled) toast('已从云端恢复');
+      else toast('本机与云端一致');
+      render(false);
+    });
+    return;
   }
   if(act==='summarySmall'||act==='summaryBig'){downloadSummary(act==='summarySmall'?'small':'big');return}
 });
@@ -1683,17 +1856,27 @@ function migrate(){
   if(!state.restPrompted)state.restPrompted={};
   if(!state.editLog)state.editLog=[];
 }
-function init(){
-  try{
-    const raw=localStorage.getItem(LS_STATE);
-    if(raw){state=JSON.parse(raw);migrate();}
-    else{state=defaultState();}
-  }catch(e){console.error('初始化出错:',e);state=defaultState();}
-  if(state.enabled)autoCheckWakeFail();
-  saveState(true);
+
+/* 启动 */
+(function(){
+  const raw = localStorage.getItem(LS_STATE);
+  if(raw){
+    try { state = JSON.parse(raw); } catch(e){ state = defaultState(); }
+  } else {
+    state = defaultState();
+  }
+  migrate();
+  autoCheckWakeFail();
   render(false);
-}
-init();
+
+  // 启动云同步
+  booted = true;
+  setTimeout(function(){
+    cloudPull(false).then(function(res){
+      if(res.pulled) render(false);
+    });
+  }, 300);
+})();
 </script>
 </body>
 </html>
