@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a1a12">
 <title>自律花园</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 :root{--bg:#0d1f14;--card:#142a1c;--card2:#1a3524;--line:#244a30;--txt:#e8f5ec;--muted:#7fa88a;--dim:#4d7a5c;--accent:#4ade80;--accent2:#22c55e;--gold:#fbbf24;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--ice:#a5d8f3;--r:16px}
@@ -172,12 +171,12 @@ body.bd-celebration .toast{background:rgba(61,16,16,.98);border-color:rgba(255,2
 body.cold .btn-p,body.rest .btn-p,body.bd-celebration .btn-p{color:#fff}
 body.bd-celebration .btn-p{background:linear-gradient(135deg,#ff4d4d,#ff8833)}
 .btn-g{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
-.btn-d{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.25)}
 .btn-sm{padding:8px 12px;font-size:12px;width:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:6px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12px;color:var(--muted);cursor:pointer;position:relative;user-select:none}
 .chip:active{transform:scale(.95)}
+.chip.on{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.5);color:var(--accent);font-weight:500}
 .chip.junk{border-color:rgba(248,113,113,.4);color:#fca5a5}
 .chip .price{font-size:10px;opacity:.6;margin-left:4px}
 .chip .cat{font-size:10px;opacity:.6;margin-left:4px}
@@ -311,12 +310,12 @@ function inSleepWindow(){const m=nowMin();return m>=SLEEP_WINDOW.start||m<SLEEP_
 function inWakeWindow(){const m=nowMin();return m>=WAKE_WINDOW.start&&m<WAKE_WINDOW.end}
 
 /* ========== 状态 ========== */
-const LS_STATE='garden_v16_official';
+const LS_STATE='garden_v17_local';
 let state=null,undoStack=[],activeTab='home',calCursor=null,scrollPos=0;
 
 function defaultState(){
   return {
-    version:16,
+    version:17,
     enabled:false,
     settings:{startDate:'',sleepDeadline:'23:30',wakeDeadline:'05:20',birthday:'',editLimitPerMonth:3,jjInitial:10,jjIncrement:5},
     birthdayCard:{used:false,usedDate:'',delayDate:'',delayResolved:false,prompted:false},
@@ -349,77 +348,19 @@ function defaultState(){
   };
 }
 
-/* ========== 云端同步逻辑（修复版） ========== */
-const SUPABASE_URL = 'https://fbwwylbqovbzjhgcojzd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_P2OU9SAOhwSSoqZMytqsKw_Z55B4CK0';
-
-let supabaseClient = null;
-let currentUser = null;
-
 function saveState(silent){
   if(!state) return;
   state.updatedAt = new Date().toISOString();
-  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {}
-  if(!currentUser || !supabaseClient) return;
-  supabaseClient.from('garden_data').upsert({
-    user_id: currentUser.id,
-    data: state,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id' }).then(({error})=>{
-    if(error){
-      console.error('云端保存失败:', error);
-      if(!silent) toast('数据已存本地，云端同步失败');
-    }
-  }).catch(e=>console.error('云端保存异常:',e));
-}
-
-async function initCloud(){
-  try {
-    if(typeof window.supabase === 'undefined'){
-      throw new Error('Supabase 库未能加载');
-    }
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    currentUser = user;
-    if(!currentUser){
-      const { data, error } = await supabaseClient.auth.signInAnonymously();
-      if(error) throw error;
-      currentUser = data.user;
-    }
-    await loadFromCloud();
-  } catch(err){
-    console.error('云端初始化失败:', err);
-    const raw = localStorage.getItem(LS_STATE);
-    if(raw){ try{ state = JSON.parse(raw); }catch(e){ state = defaultState(); } }
-    else { state = defaultState(); }
-    migrate();
-    render(false);
-    toast('云端连接失败，当前使用本地数据');
+  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e) {
+    if(!silent) toast('本地存储失败');
   }
 }
 
-async function loadFromCloud(){
-  if(!currentUser || !supabaseClient) return;
-  const { data, error } = await supabaseClient
-    .from('garden_data')
-    .select('data')
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
-  if(error) throw error;
-  if(data && data.data){
-    state = Object.assign(defaultState(), data.data);
-  } else {
-    state = defaultState();
-  }
-  migrate();
-  render(false);
-}
-
-/* ========== 打卡核心 ========== */
 function pushUndo(l){try{undoStack.push({label:l,snap:JSON.stringify(state)})}catch(e){};if(undoStack.length>12)undoStack.shift();updateUndoBtn()}
 function doUndo(){const it=undoStack.pop();if(!it){toast('没有可撤销的操作');return}state=JSON.parse(it.snap);saveState(true);updateUndoBtn();render();toast('已撤销：'+it.label)}
 function updateUndoBtn(){const b=$('#undoBtn');if(!b)return;b.classList.toggle('on',undoStack.length>0);b.textContent=undoStack.length?'↶'+undoStack.length:'↶'}
 function getRecord(d){if(!state.records[d])state.records[d]={};return state.records[d]}
+
 function getCat(id){return state.cats.find(c=>c.id===id)||{name:'已删除',color:'#64748b',isFood:false,isJunk:false}}
 function getTag(id){return state.tags.find(t=>t.id===id)}
 function getDayExpenses(d){return state.expenses.filter(e=>e.date===d)}
@@ -1739,7 +1680,6 @@ function migrate(){
   migrate();
   autoCheckWakeFail();
   render(false);
-  initCloud();
 })();
 </script>
 </body>
