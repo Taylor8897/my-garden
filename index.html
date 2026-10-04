@@ -2373,6 +2373,195 @@ function downloadReport(type){
   if(type==='big' && !info.isRest){ toast('大周期报告仅休息日可下载'); return; }
   _origDownloadReport(type);
 }
+  /* ========== 最终补丁 v2（倒计时 + 日历 + 报告限制） ========== */
+function renderTabbar(){
+  const icons={
+    home:'<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+    calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+    record:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+    willpower:'<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+    emotion:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+    finance:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    diet:'<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+    me:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.8 4-5.6 7.5-5.6S18.3 16.2 19.5 20"/>'
+  };
+  const tabs=[['home','首页'],['calendar','日历'],['record','记录'],['willpower','意志'],['emotion','情绪'],['finance','资金'],['diet','饮食'],['me','我的']];
+  $('#tabbar').innerHTML=tabs.map(([k,l])=>`<button class="tab ${activeTab===k?'active':''}" data-tab="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${icons[k]}</svg><span>${l}</span></button>`).join('');
+}
+(function(){
+  const st=document.createElement('style');
+  st.textContent='.tabbar{grid-template-columns:repeat(8,1fr)!important}.tab span{font-size:8.5px}';
+  document.head.appendChild(st);
+})();
+
+function render(preserve){
+  if(!state)state=defaultState();
+  checkStreakTimeout();
+
+  // 1) 未启用 → 显示启用页
+  const notActivated = !state.enabled || !state.settings.startDate;
+  if(notActivated){
+    document.body.classList.remove('cold','rest','bd-celebration');
+    document.querySelector('.app').style.display='none';
+    const cd=document.getElementById('countdownScreen'); if(cd) cd.remove();
+    showActivationScreen();
+    return;
+  }
+
+  // 2) 有起始时间且还没到 → 显示倒计时
+  const startTs = state.settings.startTimestamp;
+  if(startTs && Date.now() < startTs){
+    document.querySelector('.app').style.display='none';
+    const act=document.getElementById('activationScreen'); if(act) act.remove();
+    if(!document.getElementById('countdownScreen')) showCountdownScreen();
+    return;
+  }
+
+  // 3) 正常渲染
+  const cd=document.getElementById('countdownScreen'); if(cd) cd.remove();
+  document.querySelector('.app').style.display='block';
+  autoCheckJJRelease();
+  if(preserve!==false)scrollPos=window.scrollY;
+  updateUndoBtn();
+  const v=$('#view');if(!v)return;
+  try{
+    if(activeTab==='home')v.innerHTML=viewHome();
+    else if(activeTab==='calendar')v.innerHTML=viewCalendar();
+    else if(activeTab==='record')v.innerHTML=viewRecord();
+    else if(activeTab==='willpower')v.innerHTML=viewWillpower();
+    else if(activeTab==='emotion')v.innerHTML=viewEmotion();
+    else if(activeTab==='finance')v.innerHTML=viewFinance();
+    else if(activeTab==='diet')v.innerHTML=viewDiet();
+    else if(activeTab==='me')v.innerHTML=viewMe();
+  }catch(err){console.error(err);v.innerHTML=`<div class="alert danger"><span class="ico">⚠</span><div><b>渲染出错</b><p>${esc(err.message)}</p></div></div>`;}
+  renderDateNav();renderTabbar();applyTheme();spawnWeather();
+  if(preserve!==false)window.scrollTo(0,scrollPos);
+  setTimeout(checkPrompts,400);
+
+  // 4) 首次解锁动画
+  if(state.settings.unlockAnimationPlayed===false && state.settings.startTimestamp && Date.now()>=state.settings.startTimestamp){
+    setTimeout(()=>playUnlockSequence(), 400);
+  }
+}
+
+function viewCalendar(){
+  if(!calCursor){const d=parseD(todayStr());calCursor={y:d.getFullYear(),m:d.getMonth()}}
+  const{y,m}=calCursor;
+  const first=new Date(y,m,1);const startDay=first.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const today=todayStr();const sch=computeSchedule();
+  let html='';
+  for(let i=0;i<startDay;i++)html+='<div class="cal-day empty"></div>';
+  for(let day=1;day<=daysInMonth;day++){
+    const key=`${y}-${pad2(m+1)}-${pad2(day)}`;
+    const info=sch[key]||{};const rec=state.records[key];
+    const isFuture=key>today;
+    const cls=['cal-day'];
+    if(key===today)cls.push('today');
+    if(isFuture)cls.push('future');
+    if(info.isBirthday)cls.push('birthday');
+    if(info.isRest)cls.push('rest');
+    if(info.isRestCandidate)cls.push('rest-candidate');
+    if(info.type==='cooldown'||info.type==='future-cooldown')cls.push('cool');
+    else if(info.isReward)cls.push('reward');
+    else if(info.isMealDay)cls.push('meal');
+    else if(info.type==='green')cls.push('green');
+    else if(info.type==='partial')cls.push('partial');
+    if(info.isJJRelease)cls.push('jj-release');
+    const dots=[
+      rec&&rec.sleep&&rec.sleep.success?'on sleep':'',
+      rec&&rec.study&&rec.study.tier&&rec.study.tier!=='conservative'?'on study':'',
+      rec&&rec.jingji&&rec.jingji.ok?'on jj':'',
+      rec&&rec.wake&&rec.wake.fitness?'on wake':''
+    ].filter(Boolean).map(c=>`<i class="dot ${c}"></i>`).join('');
+    html+=`<div class="${cls.join(' ')}" data-date="${key}" ${isFuture?'data-future="1"':''}><span class="cal-num">${day}</span><span class="cal-dots">${dots}</span></div>`;
+  }
+  const todayInfo=sch[today]||{};
+  const canSmall=todayInfo.isReward===true;const canBig=todayInfo.isRest===true;
+  const isLatestMonth=(y===parseD(today).getFullYear()&&m===parseD(today).getMonth());
+  return `
+  <div class="card"><div class="cal-head"><button data-act="calPrev">‹</button><div class="cal-title">${y}年${m+1}月</div><button data-act="calNext" ${isLatestMonth?'disabled style="opacity:.3"':''}>›</button></div>
+    <div class="cal-week">${['日','一','二','三','四','五','六'].map(d=>`<span>${d}</span>`).join('')}</div>
+    <div class="cal-grid">${html}</div>
+  </div>
+  <div class="card"><div class="card-t"><h3>图例</h3></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted)">
+      <span>🟢 全绿</span><span>🟡 部分</span><span>❄ 冷静（冰冻）</span>
+      <span>◆ 食堂套餐日</span><span>★ 奖励日</span><span>💧 释放日</span>
+      <span>🎂 生日</span><span>🏖 休息日</span><span>? 候选</span>
+    </div>
+    <div class="hint" style="margin-top:8px;">日历只读过去和今天，未来日期不可查看。冷静期会显示冰冻标记。</div>
+  </div>
+  <div class="card"><div class="card-t"><h3>周期总结</h3></div>
+    <div class="hint">小周期总结：小周期奖励日当天可下载。<br>大周期总结：大周期休息日当天可下载。</div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-g btn-sm" style="width:100%;${canSmall?'':'opacity:.4;cursor:not-allowed'}" data-act="downloadSmallReport" ${canSmall?'':'disabled'}>${canSmall?'📊 下载小周期报告':'今日非小周期奖励日'}</button>
+      <button class="btn btn-g btn-sm" style="width:100%;${canBig?'':'opacity:.4;cursor:not-allowed'}" data-act="downloadBigReport" ${canBig?'':'disabled'}>${canBig?'📊 下载大周期报告':'今日非大周期休息日'}</button>
+    </div>
+  </div>`;
+}
+
+function viewMe(){
+  const today=todayStr();
+  const editsThisMonth=state.editLog.filter(e=>e.date.slice(0,7)===today.slice(0,7)).length;
+  const startD=state.settings.startDate;
+  const daysSince=startD?diffDays(parseD(startD),parseD(today)):0;
+  const sch=computeSchedule();const todayInfo=sch[today]||{};
+  const canSmall=todayInfo.isReward===true;
+  const canBig=todayInfo.isRest===true;
+  return `
+  <div class="card"><div class="card-t"><h3>系统状态</h3></div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--muted);">起始日期</span><span style="color:var(--accent);font-weight:600;">${startD}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--muted);">已运行</span><span style="color:var(--accent);font-weight:600;">${daysSince} 天</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--muted);">状态</span><span style="color:var(--accent);font-weight:600;">● 运行中</span></div>
+  </div>
+  <div class="card">
+    <div class="card-t"><h3>☁ 云同步</h3><span class="sub" style="color:${syncStatusType==='ok'?'#86efac':syncStatusType==='err'?'#fca5a5':syncStatusType==='warn'?'#fde68a':'var(--muted)'}">${esc(syncStatusText)}</span></div>
+    <label class="fl">你的同步码（请复制保存）</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input class="txt" id="syncCodeDisplay" value="${esc(syncUserId)}" readonly style="font-family:ui-monospace,Menlo,monospace;font-size:13px;flex:1;">
+      <button class="btn btn-g btn-sm" style="width:auto;padding:10px 14px;" data-act="copySyncCode">复制</button>
+    </div>
+    <label class="fl">在新设备输入同步码</label>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input class="txt" id="inputSyncCode" placeholder="garden_xxxxxxxx" style="flex:1;">
+      <button class="btn btn-p btn-sm" style="width:auto;padding:10px 14px;" data-act="switchSyncCode">切换</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-p" style="flex:1;" data-act="cloudPushBtn">☁ 上传</button>
+      <button class="btn btn-g" style="flex:1;" data-act="cloudPullBtn">⬇ 下载</button>
+    </div>
+    <div class="hint" style="margin-top:10px;line-height:1.7;">· 每次操作后 2 秒自动上传<br>· 换设备时输入同步码即可恢复</div>
+  </div>
+  <div class="card"><div class="card-t"><h3>初始设置</h3><span class="sub">本月可修改 ${Math.max(0,state.settings.editLimitPerMonth-editsThisMonth)} 次</span></div>
+    <label class="fl">生日日期</label>
+    <input class="txt" type="date" id="setBirthday" value="${state.settings.birthday||''}">
+    <label class="fl">睡觉截止时间</label>
+    <input class="txt" type="time" id="setSleep" value="${state.settings.sleepDeadline}">
+    <label class="fl">起床截止时间</label>
+    <input class="txt" type="time" id="setWake" value="${state.settings.wakeDeadline}">
+    <button class="btn btn-p" style="margin-top:14px" data-act="saveSettings">保存（消耗1次）</button>
+  </div>
+  <div class="card"><div class="card-t"><h3>📥 总结报告</h3><span class="sub">仅特定日期可下载</span></div>
+    <button class="btn btn-p" data-act="downloadSmallReport" ${canSmall?'':'disabled style="opacity:.4;cursor:not-allowed"'}>${canSmall?'📊 下载小周期报告（HTML）':'📊 小周期报告（仅奖励日可下载）'}</button>
+    <button class="btn btn-purple" style="margin-top:8px;${canBig?'':'opacity:.4;cursor:not-allowed;'}" data-act="downloadBigReport" ${canBig?'':'disabled'}>${canBig?'📊 下载大周期报告（HTML）':'📊 大周期报告（仅休息日可下载）'}</button>
+    <div class="hint" style="margin-top:8px;">报告包含：所有打卡、意志力、情绪、资金、饮食、热力图</div>
+  </div>
+  <div class="card"><div class="card-t"><h3>数据备份</h3></div>
+    <button class="btn btn-p" data-act="exportAll">导出全部数据</button>
+    <button class="btn btn-g" style="margin-top:8px" data-act="importAll">导入数据</button>
+  </div>
+  `;
+}
+
+/* 报告下载限制（拦截原函数） */
+const _origDownloadReport = downloadReport;
+window.downloadReport = function(type){
+  const sch=computeSchedule();const info=sch[todayStr()]||{};
+  if(type==='small' && !info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
+  if(type==='big' && !info.isRest){ toast('大周期报告仅休息日可下载'); return; }
+  _origDownloadReport(type);
+};
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
