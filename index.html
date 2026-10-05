@@ -3992,6 +3992,87 @@ computeSchedule = function(){
 
   return result;
 };
+  /* ========== v16：强制刷新起床规则 + 清理今天遗留记录 ========== */
+(function(){
+  /* 1. 强制重定义三个关键函数 */
+  window.inWakeWindow = function(){
+    var m = nowMin();
+    var t = 'normal';
+    try{
+      var sch = computeSchedule();
+      var info = sch[todayStr()] || {};
+      if(info.isRest) t = 'rest';
+      else if(info.isReward) t = 'reward';
+    }catch(e){}
+    if(t === 'rest') return true;
+    if(t === 'reward') return m >= 4*60 && m < 9*60;
+    return m >= 4*60 && m < 7*60 + 15;
+  };
+
+  window.judgeWake = function(time){
+    if(!time) return {fitness:false, msg:'未打卡'};
+    var t = timeToMin(time);
+    var isReward = false;
+    try{
+      var sch = computeSchedule();
+      var info = sch[todayStr()] || {};
+      isReward = !!info.isReward;
+    }catch(e){}
+    if(isReward){
+      if(t <= timeToMin('07:20')) return {fitness:true, msg:'奖励日起床达标 ✓'};
+      return {fitness:false, msg:'奖励日超时（≤7:20达标）'};
+    }
+    var d = timeToMin(state.settings.wakeDeadline || '05:20');
+    if(t <= d) return {fitness:true, msg:'起床达标 ✓'};
+    return {fitness:false, msg:'超过5:20，影响健身（连续2次进冷静）'};
+  };
+
+  window.autoCheckWakeFail = function(){
+    var today = todayStr();
+    var r = state.records[today];
+    if(r && r.wake && r.wake.checked) return;
+    var isReward = false, isRest = false;
+    try{
+      var sch = computeSchedule();
+      var info = sch[today] || {};
+      isReward = !!info.isReward;
+      isRest = !!info.isRest;
+    }catch(e){}
+    if(isRest) return;
+    var cutoffMin = isReward ? 9*60 : 7*60 + 15;
+    var cutoffLabel = isReward ? '超过9:00未打卡' : '超过7:15未打卡';
+    var timeLabel = isReward ? '09:00' : '07:15';
+    if(nowMin() >= cutoffMin){
+      var rec = getRecord(today);
+      if(!rec.wake || !rec.wake.checked){
+        rec.wake = {
+          time: timeLabel,
+          fitness: false,
+          msg: cutoffLabel + '，自动失败 +1天冷静期',
+          checked: true,
+          autoFail: true,
+          cutoffLabel: cutoffLabel
+        };
+        saveState(true);
+      }
+    }
+  };
+
+  /* 2. 清理今天遗留的 07:05 记录 */
+  var today = todayStr();
+  var rec = state.records[today];
+  if(rec && rec.wake && rec.wake.autoFail && rec.wake.time === '07:05'){
+    delete rec.wake;
+    saveState(true);
+    console.log('[v16] 已清理今天遗留的 07:05 记录');
+  }
+
+  /* 3. 重跑一次自动判定 */
+  try{ window.autoCheckWakeFail(); }catch(e){}
+
+  /* 4. 立即重新渲染 */
+  try{ render(false); }catch(e){}
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
