@@ -4073,6 +4073,159 @@ computeSchedule = function(){
   /* 4. 立即重新渲染 */
   try{ render(false); }catch(e){}
 })();
+  /* ========== v17：修复白屏 + 起床规则（全安全链式） ========== */
+(function(){
+  // 1. 完全重写 renderHomeCalendarCard，不再依赖任何 _origRHCC 链条
+  window.renderHomeCalendarCard = function(){
+    try{
+      if(!calCursor){var d0=parseD(todayStr());calCursor={y:d0.getFullYear(),m:d0.getMonth()}}
+      var y=calCursor.y, m=calCursor.m;
+      var first=new Date(y,m,1);var startDay=first.getDay();
+      var daysInMonth=new Date(y,m+1,0).getDate();
+      var today=todayStr();var sch=computeSchedule();
+      var html='';
+      for(var i=0;i<startDay;i++)html+='<div class="cal-day empty"></div>';
+      for(var day=1;day<=daysInMonth;day++){
+        var key=y+'-'+pad2(m+1)+'-'+pad2(day);
+        var info=sch[key]||{};var rec=state.records[key];
+        var isFuture=key>today;
+        var cls=['cal-day'];
+        if(key===today)cls.push('today');
+        if(isFuture)cls.push('future');
+        if(info.isBirthday)cls.push('birthday');
+        if(info.isRest)cls.push('rest');
+        if(info.isRestCandidate)cls.push('rest-candidate');
+        if(info.type==='cooldown'||info.type==='future-cooldown')cls.push('cool');
+        else if(info.isReward)cls.push('reward');
+        else if(info.isMealDay)cls.push('meal');
+        else if(info.type==='green')cls.push('green');
+        else if(info.type==='partial')cls.push('partial');
+        if(info.isJJRelease)cls.push('jj-release');
+        var dots=[
+          rec&&rec.sleep&&rec.sleep.success?'on sleep':'',
+          rec&&rec.study&&rec.study.tier&&rec.study.tier!=='conservative'?'on study':'',
+          rec&&rec.jingji&&rec.jingji.ok?'on jj':'',
+          rec&&rec.wake&&rec.wake.fitness?'on wake':''
+        ].filter(Boolean).map(function(c){return '<i class="dot '+c+'"></i>';}).join('');
+        html+='<div class="'+cls.join(' ')+'" data-date="'+key+'"'+(isFuture?' data-future="1"':'')+'><span class="cal-num">'+day+'</span><span class="cal-dots">'+dots+'</span></div>';
+      }
+      return '<div class="card">'
+        +'<div class="card-t"><h3>📅 日历 · 未来安排</h3><span class="sub">冰冻/奖励/食堂日</span></div>'
+        +'<div class="cal-head" style="margin-top:0"><button data-act="calPrev">‹</button><div class="cal-title">'+y+'年'+(m+1)+'月</div><button data-act="calNext">›</button></div>'
+        +'<div class="cal-week">'+['日','一','二','三','四','五','六'].map(function(d){return '<span>'+d+'</span>';}).join('')+'</div>'
+        +'<div class="cal-grid">'+html+'</div>'
+        +'<div class="heat-legend" style="margin-top:10px"><span>❄ 冷静</span><span>◆ 食堂日</span><span>★ 奖励日</span><span>💧 释放日</span><span>🏖 休息日</span></div>'
+        +'</div>';
+    }catch(e){
+      console.error('renderHomeCalendarCard error', e);
+      return '<div class="card" style="color:#fca5a5">日历渲染失败：'+e.message+'</div>';
+    }
+  };
+
+  // 2. 安全包装 viewHome，出错也不白屏
+  var _v17_prevHome = window.viewHome;
+  window.viewHome = function(){
+    try{
+      var base = _v17_prevHome ? _v17_prevHome() : '';
+      if(typeof base !== 'string') base = '';
+      return base;
+    }catch(e){
+      console.error('viewHome error', e);
+      return '<div class="card"><h3>页面渲染出错</h3><p style="color:#fca5a5">'+e.message+'</p></div>';
+    }
+  };
+
+  // 3. 安全包装 render，出错也不白屏
+  var _v17_prevRender = window.render;
+  window.render = function(preserve){
+    try{
+      if(typeof _v17_prevRender === 'function') _v17_prevRender(preserve);
+    }catch(e){
+      console.error('render error', e);
+      var v = document.getElementById('view');
+      if(v) v.innerHTML = '<div class="card"><h3>页面渲染出错</h3><p style="color:#fca5a5">'+e.message+'</p></div>';
+    }
+  };
+
+  // 4. 强制重定义起床相关函数（普通日 7:15，奖励日 9:00，休息日豁免）
+  window.inWakeWindow = function(){
+    var m = nowMin();
+    var t = 'normal';
+    try{
+      var sch = computeSchedule();
+      var info = sch[todayStr()] || {};
+      if(info.isRest) t = 'rest';
+      else if(info.isReward) t = 'reward';
+    }catch(e){}
+    if(t === 'rest') return true;
+    if(t === 'reward') return m >= 4*60 && m < 9*60;
+    return m >= 4*60 && m < 7*60 + 15;
+  };
+
+  window.judgeWake = function(time){
+    if(!time) return {fitness:false, msg:'未打卡'};
+    var t = timeToMin(time);
+    var isReward = false;
+    try{
+      var sch = computeSchedule();
+      var info = sch[todayStr()] || {};
+      isReward = !!info.isReward;
+    }catch(e){}
+    if(isReward){
+      if(t <= timeToMin('07:20')) return {fitness:true, msg:'奖励日起床达标 ✓'};
+      return {fitness:false, msg:'奖励日超时（≤7:20达标）'};
+    }
+    var d = timeToMin(state.settings.wakeDeadline || '05:20');
+    if(t <= d) return {fitness:true, msg:'起床达标 ✓'};
+    return {fitness:false, msg:'超过5:20，影响健身（连续2次进冷静）'};
+  };
+
+  window.autoCheckWakeFail = function(){
+    var today = todayStr();
+    var r = state.records[today];
+    if(r && r.wake && r.wake.checked) return;
+    var isReward = false, isRest = false;
+    try{
+      var sch = computeSchedule();
+      var info = sch[today] || {};
+      isReward = !!info.isReward;
+      isRest = !!info.isRest;
+    }catch(e){}
+    if(isRest) return;
+    var cutoffMin = isReward ? 9*60 : 7*60 + 15;
+    var cutoffLabel = isReward ? '超过9:00未打卡' : '超过7:15未打卡';
+    var timeLabel = isReward ? '09:00' : '07:15';
+    if(nowMin() >= cutoffMin){
+      var rec = getRecord(today);
+      if(!rec.wake || !rec.wake.checked){
+        rec.wake = {
+          time: timeLabel,
+          fitness: false,
+          msg: cutoffLabel + '，自动失败 +1天冷静期',
+          checked: true,
+          autoFail: true,
+          cutoffLabel: cutoffLabel
+        };
+        saveState(true);
+      }
+    }
+  };
+
+  // 5. 清理今天遗留的 07:05 错误记录
+  try{
+    var today = todayStr();
+    var rec = state.records[today];
+    if(rec && rec.wake && rec.wake.autoFail && rec.wake.time === '07:05'){
+      delete rec.wake;
+      saveState(true);
+      console.log('[v17] 已清理今天的 07:05 遗留记录');
+    }
+  }catch(e){}
+
+  // 6. 重跑一次起床检查
+  try{ window.autoCheckWakeFail(); }catch(e){}
+})();
+
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
