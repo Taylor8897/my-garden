@@ -4054,15 +4054,16 @@ computeSchedule = function(){
     }
   };
 
-  /* 2. 清理今天遗留的 07:05 记录 */
-  var today = todayStr();
-  var rec = state.records[today];
-  if(rec && rec.wake && rec.wake.autoFail && rec.wake.time === '07:05'){
-    delete rec.wake;
-    saveState(true);
-    console.log('[v16] 已清理今天遗留的 07:05 记录');
-  }
-
+  /* 2. 清理今天遗留的 07:05 记录（安全版：state 未初始化时跳过） */
+  try{
+    var today = todayStr();
+    var rec = state ? state.records[today] : null;
+    if(rec && rec.wake && rec.wake.autoFail && rec.wake.time === '07:05'){
+      delete rec.wake;
+      saveState(true);
+      console.log('[v16] 已清理今天遗留的 07:05 记录');
+    }
+  }catch(e){ console.log('[v16] 清理跳过', e); }
   /* 3. 重跑一次自动判定 */
   try{ window.autoCheckWakeFail(); }catch(e){}
 
