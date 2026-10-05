@@ -3656,6 +3656,342 @@ computeSchedule = function(){
   }
   return result;
 };
+  /* ========== v15 综合补丁：起床规则 + 奖励日 + 休息日轻打卡 + 手动休息日（链式追加） ========== */
+
+/* 1. 标签管理 CSS 强制刷回来 */
+(function(){
+  var css = ''
+    + '.cat-group{margin-bottom:12px;padding:14px 12px;background:#1a3524;border-radius:14px;border:1px solid #244a30}'
+    + '.cat-group-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}'
+    + '.cat-group-h .name{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;color:#e8f5ec}'
+    + '.cat-group-h .name i{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}'
+    + '.tag-list{display:flex;flex-wrap:wrap;gap:8px}'
+    + '.tag-item{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#142a1c;border:1px solid #244a30;border-radius:10px;font-size:12.5px;cursor:pointer;color:#e8f5ec;transition:.15s;line-height:1.3}'
+    + '.tag-item:hover{background:#1f3a28;border-color:#3a5a40}'
+    + '.tag-item:active{transform:scale(.96)}'
+    + '.tag-item .rm{color:#fca5a5;font-weight:700;font-size:15px;padding:0 2px;line-height:1;margin-left:2px}';
+  var st = document.createElement('style');
+  st.id = 'tagFixStyle';
+  st.textContent = css;
+  document.head.appendChild(st);
+})();
+
+/* 2. 判断今天属于哪一类（带 5 秒缓存） */
+var _typeCache = { ts: 0, type: 'normal' };
+function getTodayType(){
+  var now = Date.now();
+  if(now - _typeCache.ts < 5000) return _typeCache.type;
+  var sch = computeSchedule();
+  var info = sch[todayStr()] || {};
+  var type = 'normal';
+  if(info.isRest) type = 'rest';
+  else if(info.isReward) type = 'reward';
+  _typeCache.ts = now;
+  _typeCache.type = type;
+  return type;
+}
+
+/* 3. 打卡窗口 + 判定 + 自动失败（区分三类日） */
+inWakeWindow = function(){
+  var m = nowMin();
+  var type = getTodayType();
+  if(type === 'rest') return true;               // 休息日随便打
+  if(type === 'reward') return m >= 4*60 && m < 9*60;
+  return m >= 4*60 && m < 7*60 + 15;             // 普通日
+};
+
+judgeWake = function(time){
+  if(!time) return {fitness:false, msg:'未打卡'};
+  var t = timeToMin(time);
+  var type = getTodayType();
+  if(type === 'reward'){
+    var dw = timeToMin('07:20');
+    if(t <= dw) return {fitness:true, msg:'奖励日起床达标 ✓'};
+    return {fitness:false, msg:'奖励日超时（≤7:20 才达标），今日不能健身'};
+  }
+  var d = timeToMin(state.settings.wakeDeadline || '05:20');
+  if(t <= d) return {fitness:true, msg:'起床达标 ✓'};
+  return {fitness:false, msg:'超过5:20，影响健身（连续2次进冷静）'};
+};
+
+autoCheckWakeFail = function(){
+  var today = todayStr();
+  var r = state.records[today];
+  if(r && r.wake && r.wake.checked) return;
+  var type = getTodayType();
+  if(type === 'rest') return;                    // 休息日不检测
+  var cutoffMin = (type === 'reward') ? 9*60 : 7*60 + 15;
+  var cutoffLabel = (type === 'reward') ? '超过9:00未打卡' : '超过7:15未打卡';
+  if(nowMin() >= cutoffMin){
+    var rec = getRecord(today);
+    if(!rec.wake || !rec.wake.checked){
+      rec.wake = {
+        time: (type === 'reward') ? '09:00' : '07:15',
+        fitness: false,
+        msg: cutoffLabel + '，自动失败 +1天冷静期',
+        checked: true,
+        autoFail: true,
+        cutoffLabel: cutoffLabel
+      };
+      saveState(true);
+    }
+  }
+};
+
+/* 4. doCheckin 链式追加：休息日轻打卡 + 奖励日起床标记 */
+(function(){
+  var _prevDC = doCheckin;
+  doCheckin = function(project){
+    var today = todayStr();
+    var type = getTodayType();
+    var rec = getRecord(today);
+    if(rec.birthdayCard){ toast('生日豁免日，无需打卡'); return; }
+
+    /* --- 休息日：轻打卡，不作数 --- */
+    if(type === 'rest'){
+      pushUndo('休息日记录：' + project);
+      if(project === 'sleep'){
+        rec.sleep = { time: nowTimeStr(), success: true, msg: '休息日记录', checked: true, restDay: true };
+      } else if(project === 'wake'){
+        rec.wake = { time: nowTimeStr(), fitness: true, msg: '休息日记录', checked: true, restDay: true };
+      } else if(project === 'study'){
+        var h = parseFloat($('#in_study') && $('#in_study').value);
+        if(!h || h <= 0){ toast('请输入小时数'); return; }
+        rec.study = { hours: h, tier: 'rest', label: '休息日记录', checked: true, restDay: true };
+      } else if(project === 'fitness'){
+        rec.fitness = { checked: true, time: nowTimeStr(), restDay: true };
+      } else if(project === 'jingji'){
+        rec.jingji = { ok: true, msg: '休息日记录', checked: true, restDay: true };
+      } else {
+        return _prevDC(project);
+      }
+      saveState(); render();
+      toast('已记录（休息日不作数）');
+      return;
+    }
+
+    /* --- 奖励日 / 普通日的起床打卡特殊处理 --- */
+    if(project === 'wake'){
+      if(rec.wake && rec.wake.checked){ toast('今天已打卡'); return; }
+      if(!inWakeWindow()){ toast('不在打卡窗口'); return; }
+      var t = nowTimeStr();
+      var j = judgeWake(t);
+      var isRewardLate = (type === 'reward' && !j.fitness);
+      pushUndo('打卡：起床');
+      rec.wake = {
+        time: t,
+        fitness: j.fitness,
+        msg: j.msg,
+        checked: true,
+        isRewardLate: isRewardLate
+      };
+      saveState(); render();
+      if(j.fitness) toast('起床打卡成功 ✓ ' + t);
+      else toast('起床未达标 · ' + j.msg);
+      return;
+    }
+
+    /* --- 其他项目走原来的逻辑 --- */
+    return _prevDC(project);
+  };
+})();
+
+/* 5. viewRecord 链式追加：休息日显示轻打卡界面 */
+(function(){
+  var _prevVR = viewRecord;
+  viewRecord = function(){
+    var today = todayStr();
+    var sch = computeSchedule();
+    var info = sch[today] || {};
+    if(!info.isRest) return _prevVR();
+    var rec = getRecord(today);
+    var sleepCk = rec.sleep && rec.sleep.checked;
+    var wakeCk  = rec.wake  && rec.wake.checked;
+    var studyCk = rec.study && rec.study.checked;
+    var fitCk   = rec.fitness && rec.fitness.checked;
+    return `
+    <div class="rest-hero">
+      <div class="rest-icon">🏖</div>
+      <div class="rest-title">今天好好休息</div>
+      <div class="rest-sub">休息日 · 打卡仅记录，不作数<br>不会进冷静期，不影响任何进度</div>
+    </div>
+    <div class="card">
+      <div class="card-t"><h3>轻打卡 · 记录用</h3><span class="sub">可选</span></div>
+      <div class="task ${sleepCk?'checked':''}">
+        <div class="task-head"><div class="task-icon">🌙</div><div class="task-title"><h4>睡觉</h4><p>随便记一下</p></div></div>
+        ${sleepCk ? '<div class="task-result ok">' + rec.sleep.time + ' · ' + (rec.sleep.msg||'已记录') + '</div>' : '<button class="task-btn full" data-checkin="sleep">记录睡觉</button>'}
+      </div>
+      <div class="task ${wakeCk?'checked':''}">
+        <div class="task-head"><div class="task-icon">☀</div><div class="task-title"><h4>起床</h4><p>随便记一下</p></div></div>
+        ${wakeCk ? '<div class="task-result ok">' + rec.wake.time + ' · ' + (rec.wake.msg||'已记录') + '</div>' : '<button class="task-btn full" data-checkin="wake">记录起床</button>'}
+      </div>
+      <div class="task ${fitCk?'checked':''}">
+        <div class="task-head"><div class="task-icon">💪</div><div class="task-title"><h4>健身</h4><p>随便记一下</p></div></div>
+        ${fitCk ? '<div class="task-result ok">已记录 ✓</div>' : '<button class="task-btn full" data-checkin="fitness">记录健身</button>'}
+      </div>
+      <div class="task ${studyCk?'checked':''}">
+        <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>随便记一下</p></div></div>
+        ${studyCk ? '<div class="task-result ok">' + rec.study.hours + 'h · 已记录</div>' : '<div style="display:flex;gap:8px"><input class="txt" type="number" step="0.1" id="in_study" placeholder="小时" style="flex:1"><button class="task-btn" data-checkin="study">记录</button></div>'}
+      </div>
+    </div>`;
+  };
+})();
+
+/* 6. computeSchedule 重写：包含 v14 全部逻辑 + 奖励日起床规则 + 手动休息日 */
+computeSchedule = function(){
+  var result = {};
+  var today = todayStr();
+  var startDateStr = state.settings.startDate || today;
+  var d = parseD(startDateStr);
+  var endDate = addDays(parseD(today), 200);
+  var cooldownTotal=0, consecutiveGreen=0, wakeFailStreak=0, conservativeStreak=0;
+  var cycleDay=0, bigCycleDay=0, pendingRestKey=null, lastBigCycleComplete=0;
+  var jjCurrent=0, jjCycleLength=state.settings.jjInitial||10;
+  var restReschedule=state.restReschedule||{};
+  var guard=0;
+
+  while(d<=endDate && guard++<1000){
+    var key = fmtDate(d);
+    var rec = state.records[key];
+    var isFuture = key > today;
+    var dayInfo = {key:key,type:'future',cycleDay:0,isReward:false,isMealDay:false,isBirthday:false,isRest:false,isRestCandidate:false,cooldownRemaining:0,isJJRelease:false,isBigCycleComplete:false,cooldownBreakdown:null,isManualRest:false};
+    if(isBirthdayDate(key)) dayInfo.isBirthday = true;
+
+    // JJ 释放日
+    if(!isFuture && rec){
+      if(rec.jingji && rec.jingji.checked){
+        if(rec.jingji.ok === true){ jjCurrent++; if(jjCurrent>=jjCycleLength){ dayInfo.isJJRelease=true; jjCurrent=0; jjCycleLength+=(state.settings.jjIncrement||5); } }
+        else if(rec.jingji.broken){ jjCurrent=0; }
+      } else { jjCurrent=0; }
+    } else if(isFuture){
+      jjCurrent++; if(jjCurrent>=jjCycleLength){ dayInfo.isJJRelease=true; jjCurrent=0; jjCycleLength+=(state.settings.jjIncrement||5); }
+    }
+
+    // 待定休息日
+    if(pendingRestKey === key){
+      var resolution = state.restResolved[key], delayedTo = restReschedule[key];
+      if(resolution === 'delay' && delayedTo){ dayInfo.isRestCandidate=true; pendingRestKey=delayedTo; }
+      else { dayInfo.isRest=true; dayInfo.isRestConfirmed=(resolution==='keep'); result[key]=dayInfo; cycleDay=0; bigCycleDay=0; pendingRestKey=null; lastBigCycleComplete=0; d.setDate(d.getDate()+1); continue; }
+    }
+
+    // 延后休息日
+    var isDelayedRestDay = false;
+    for(var orig in restReschedule){ if(restReschedule[orig]===key && orig!==key){ isDelayedRestDay=true; break; } }
+    if(isDelayedRestDay){ dayInfo.isRest=true; dayInfo.isRestConfirmed=true; result[key]=dayInfo; cycleDay=0; bigCycleDay=0; pendingRestKey=null; lastBigCycleComplete=0; d.setDate(d.getDate()+1); continue; }
+
+    // 冷静期
+    if(cooldownTotal > 0){
+      dayInfo.type = isFuture ? 'future-cooldown' : 'cooldown';
+      dayInfo.cooldownRemaining = cooldownTotal;
+      if(rec && !isFuture){
+        if(isGreenForCooldown(rec,key,dayInfo.isJJRelease)){ cooldownTotal--; consecutiveGreen++; if(consecutiveGreen>=2 && cooldownTotal>=3){ cooldownTotal--; consecutiveGreen=0; } }
+        else{
+          consecutiveGreen = 0;
+          var dayCd = getDayCooldown(rec,key);
+          if(dayCd.total>0){ cooldownTotal+=dayCd.total; dayInfo.cooldownBreakdown=dayCd.breakdown; }
+          // 起床判定
+          if(rec.wake && rec.wake.checked && !rec.wake.fitness){
+            if(rec.wake.autoFail){
+              cooldownTotal += 1;
+              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
+              dayInfo.cooldownBreakdown.push({name: rec.wake.cutoffLabel || '超过截止未打卡', days:1});
+              wakeFailStreak = 0;
+            } else if(rec.wake.isRewardLate){
+              wakeFailStreak = 0;
+            } else {
+              wakeFailStreak++;
+              if(wakeFailStreak >= 2){
+                cooldownTotal += 1;
+                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
+                dayInfo.cooldownBreakdown.push({name:'连续2次起床超时', days:1});
+                wakeFailStreak = 0;
+              }
+            }
+          } else { wakeFailStreak = 0; }
+          if(rec.study && rec.study.tier==='conservative'){ conservativeStreak++; if(conservativeStreak>=3){ cooldownTotal+=1; conservativeStreak=0; } } else { conservativeStreak=0; }
+        }
+        if(cooldownTotal<=0){ cooldownTotal=0; consecutiveGreen=0; dayInfo.type='green'; }
+      } else if(isFuture){
+        cooldownTotal--; consecutiveGreen++; if(consecutiveGreen>=2 && cooldownTotal>=3){ cooldownTotal--; consecutiveGreen=0; }
+        if(cooldownTotal<=0){ cooldownTotal=0; consecutiveGreen=0; }
+      }
+    } else {
+      if(rec && !isFuture){
+        if(isGreenForCycle(rec,key,dayInfo.isJJRelease)){
+          cycleDay++; bigCycleDay++; dayInfo.type='green'; dayInfo.cycleDay=cycleDay;
+          if(cycleDay%8===4) dayInfo.isMealDay=true;
+          if(cycleDay%8===0 && cycleDay>0) dayInfo.isReward=true;
+        } else if(rec.birthdayCard || rec.sick || rec.protect){ dayInfo.type='partial'; }
+        else{
+          dayInfo.type='partial';
+          var dayCd2 = getDayCooldown(rec,key);
+          if(dayCd2.total>0){ cooldownTotal+=dayCd2.total; dayInfo.cooldownBreakdown=dayCd2.breakdown; }
+          if(rec.wake && rec.wake.checked && !rec.wake.fitness){
+            if(rec.wake.autoFail){
+              cooldownTotal += 1;
+              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
+              dayInfo.cooldownBreakdown.push({name: rec.wake.cutoffLabel || '超过截止未打卡', days:1});
+              wakeFailStreak = 0;
+            } else if(rec.wake.isRewardLate){
+              wakeFailStreak = 0;
+            } else {
+              wakeFailStreak++;
+              if(wakeFailStreak >= 2){
+                cooldownTotal += 1;
+                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
+                dayInfo.cooldownBreakdown.push({name:'连续2次起床超时', days:1});
+                wakeFailStreak = 0;
+              }
+            }
+          } else { wakeFailStreak = 0; }
+          if(rec.study && rec.study.tier==='conservative'){ conservativeStreak++; if(conservativeStreak>=3){ cooldownTotal+=1; conservativeStreak=0; } } else { conservativeStreak=0; }
+        }
+      } else if(isFuture){
+        cycleDay++; bigCycleDay++; dayInfo.type='future'; dayInfo.cycleDay=cycleDay;
+        if(cycleDay%8===4) dayInfo.isMealDay=true;
+        if(cycleDay%8===0 && cycleDay>0) dayInfo.isReward=true;
+      }
+    }
+
+    if(cycleDay>0 && cycleDay%32===0 && cycleDay!==lastBigCycleComplete){
+      pendingRestKey = fmtDate(addDays(d,1));
+      lastBigCycleComplete = cycleDay;
+      dayInfo.isBigCycleComplete = true;
+    }
+    result[key] = dayInfo;
+    d.setDate(d.getDate() + 1);
+  }
+
+  // ===== 手动休息日（10-09，跟随冷静期顺延）=====
+  if(state.settings.startDate){
+    var plan = state.settings.manualRestPlan || { date: '2026-10-09' };
+    if(plan && plan.date){
+      var targetDays = diffDays(parseD(state.settings.startDate), parseD(plan.date)) + 1;
+      var count = 0;
+      var dd = parseD(state.settings.startDate);
+      for(var i=0;i<60;i++){
+        var k = fmtDate(dd);
+        if(!result[k]) break;
+        var inf = result[k];
+        var isCool = (inf.type === 'cooldown' || inf.type === 'future-cooldown');
+        if(!isCool && !inf.isRest){
+          count++;
+          if(count === targetDays){
+            result[k] = Object.assign({}, inf, {
+              type:'rest', isRest:true, isManualRest:true, isRestConfirmed:true,
+              isReward:false, isMealDay:false, isRestCandidate:false,
+              cooldownRemaining:0, isJJRelease:false, cooldownBreakdown:null
+            });
+            break;
+          }
+        }
+        dd = addDays(dd, 1);
+      }
+    }
+  }
+
+  return result;
+};
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
