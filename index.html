@@ -962,15 +962,14 @@ function computeSchedule(){
                 if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
                 dayInfo.cooldownBreakdown.push({ name:'连续2次起床超时', days:1 });
                 wakeFailStreak = 0;
-              }
-            }
-          } else { wakeFailStreak = 0; }
+  }
+  }
+} else { wakeFailStreak = 0; }
           if(rec.study && rec.study.tier === 'conservative'){
             conservativeStreak++;
             if(conservativeStreak >= 3){ cooldownTotal += 1; conservativeStreak = 0; }
           } else { conservativeStreak = 0; }
         }
-                 } else { conservativeStreak = 0; }
           if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
         } else if(isFuture){
           if(cooldownTotal >= 3){
