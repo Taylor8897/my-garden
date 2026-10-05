@@ -3188,6 +3188,178 @@ function viewCalendar(){
     return result;
   };
 })();
+  /* ========== v11：还原健身打卡 + 大类管理 + 标签管理 ========== */
+function viewRecord(){
+  const today=todayStr();
+  const rec=getRecord(today);const sch=computeSchedule();const info=sch[today]||{};
+  const isReward=info.isReward;const isJJRelease=info.isJJRelease;
+  const confirmed=rec.confirmed===true;const editMode=rec._editMode===true;
+  const isBdImm=rec.birthdayCard===true;
+  if(isBdImm)return viewBirthdayCard(rec);
+  if(info.isRest)return `<div class="rest-hero"><div class="rest-icon">🏖</div><div class="rest-title">今天是休息日</div><div class="rest-sub">不用打卡，所有项目已自动豁免。</div></div>`;
+  const sleepChecked=rec.sleep&&rec.sleep.checked;
+  const wakeChecked=rec.wake&&rec.wake.checked;
+  const wakeOk=rec.wake&&rec.wake.fitness;
+  const studyChecked=rec.study&&rec.study.checked;
+  const fitnessChecked=rec.fitness&&rec.fitness.checked;
+  const jjChecked=rec.jingji&&rec.jingji.checked;
+  const jjEffective=jjChecked||isJJRelease;
+  const todayExpenses=getDayExpenses(today);
+  const moneyOk=isMoneyOk(today);const dietOk=isDietOk(today);
+  const allCoreChecked=sleepChecked&&wakeChecked&&studyChecked&&todayExpenses.length>0&&jjEffective;
+  const canSleep=inSleepWindow();const canWake=inWakeWindow();
+  const jj=state.jj;const jjProgress=jj.cycleLength>0?(jj.current/jj.cycleLength*100):0;
+  const pending=rec._moneyPending||[];
+  const todaySpent=todayExpenses.reduce((a,b)=>a+(b.price||0),0);
+  let banners='';
+  if(info.isRestCandidate&&!state.restResolved[today]){
+    banners+=`<div class="alert rest" style="margin-bottom:10px"><span class="ico">🏖</span><div><b>今天是休息日候选</b><p>请选择：今天休息 / 延后。<button class="btn btn-p btn-sm" style="margin-top:8px" data-act="openRestChoice">🏖 立即选择</button></p></div></div>`;
+  }
+  if(isBirthdayDate(today)&&!isBdImm){
+    if(state.birthdayCard.used)banners+=`<div class="alert bd" style="margin-bottom:10px"><span class="ico">🎂</span><div><b>生日快乐</b><p>生日卡已用于 ${state.birthdayCard.usedDate}，今天正常打卡。</p></div></div>`;
+    else if(state.birthdayCard.delayResolved)banners+=`<div class="alert bd" style="margin-bottom:10px"><span class="ico">🎂</span><div><b>生日快乐</b><p>生日卡已延后到 ${state.birthdayCard.delayDate}，今天要正常打卡。</p></div></div>`;
+  }
+  return `
+  ${banners}
+  <div class="card">
+    <div class="card-t"><h3>今日打卡 · ${today}</h3><span class="sub">${isReward?'★ 奖励日':(info.isMealDay?'◆ 减脂餐日':(isJJRelease?'💧 释放日':''))}</span></div>
+    <div class="task ${sleepChecked?'checked':''} ${sleepChecked&&!rec.sleep.success?'failed':''}">
+      <div class="task-head"><div class="task-icon">🌙</div><div class="task-title"><h4>睡觉</h4><p>23:30前点击</p></div></div>
+      ${!sleepChecked?`<button class="task-btn full" data-checkin="sleep" ${!canSleep?'disabled':''}>点击打卡</button><div style="font-size:10px;color:var(--dim);text-align:center;margin-top:4px;">窗口：23:00-次日5:00${!canSleep?' · 不在窗口':''}</div>`:`<div class="task-result ${rec.sleep.success?'ok':'bad'}">${rec.sleep.time} · ${rec.sleep.msg}</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="sleep">修改</button>`:''}`}
+    </div>
+    <div class="task ${wakeChecked?'checked':''} ${wakeChecked&&!rec.wake.fitness?'failed':''}">
+      <div class="task-head"><div class="task-icon">☀</div><div class="task-title"><h4>起床</h4><p>5:20前点击，联动健身</p></div></div>
+      ${!wakeChecked?`<button class="task-btn full" data-checkin="wake" ${!canWake?'disabled':''}>点击打卡</button><div style="font-size:10px;color:var(--dim);text-align:center;margin-top:4px;">窗口：4:00-7:00${!canWake?' · 不在窗口':''}</div>`:`<div class="task-result ${rec.wake.fitness?'ok':'bad'}">${rec.wake.time} · ${rec.wake.msg}</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="wake">修改</button>`:''}`}
+    </div>
+    <div class="task ${fitnessChecked?'checked':''} ${!wakeOk?'locked':''}">
+      <div class="task-head"><div class="task-icon">💪</div><div class="task-title"><h4>健身</h4><p>${wakeOk?'起床达标，可打卡（选做）':'需起床达标'}</p></div></div>
+      ${!fitnessChecked?`<button class="task-btn full" data-checkin="fitness" ${!wakeOk?'disabled':''}>点击打卡</button>`:`<div class="task-result ok">健身打卡成功 ✓</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="fitness">修改</button>`:''}`}
+    </div>
+    <div class="task ${studyChecked?'checked':''} ${studyChecked&&!(rec.study.tier==='normal'||rec.study.tier==='reward')?'failed':''}">
+      <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>${isReward?'奖励日 ≥7h正常':'10h+奖励 · 9-10h正常 · 8-9h保守'}</p></div></div>
+      ${!studyChecked?`<div style="display:flex;gap:8px"><input class="txt" type="number" step="0.1" id="in_study" placeholder="小时" value="${rec.study?.hours||''}" style="flex:1"><button class="task-btn" data-checkin="study">打卡</button></div>`:`<div class="task-result ${rec.study.tier==='normal'||rec.study.tier==='reward'?'ok':'bad'}">${rec.study.hours}h · ${rec.study.label}</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="study">修改</button>`:''}`}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><h3>用钱 / 饮食</h3><span class="sub">今日已花 ¥${todaySpent.toFixed(2)}</span></div>
+    <div class="hint" style="margin-bottom:8px;">点标签加到待记录。提交后自动同步到资金和饮食板块。</div>
+    <div class="chips" style="margin-bottom:10px">
+      ${state.tags.map(t=>{const cat=getCat(t.catId);return`<div class="chip ${cat.isJunk?'junk':''}" data-add-tag="${t.id}">${esc(t.name)}<span class="price">¥${t.price}</span><span class="cat">${esc(cat.name)}</span></div>`;}).join('')}
+    </div>
+    ${pending.length>0?`
+      <div style="font-size:10.5px;color:var(--gold);margin-bottom:4px;">待记录：</div>
+      <div style="margin-bottom:10px;">
+        ${pending.map(p=>`<span class="pending-tag">${esc(p.name)} ¥${p.price}<span class="rm" data-rm-pending="${p.id}">×</span></span>`).join('')}
+      </div>
+    `:''}
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input class="txt" type="number" step="0.01" id="in_amt" placeholder="手动金额" style="flex:1">
+      <button class="btn btn-g btn-sm" style="width:auto;padding:10px 14px;" data-act="add-manual">添加</button>
+    </div>
+    <button class="btn btn-p" data-act="submit-money">提交今日记录</button>
+    ${pending.length>0?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px;color:#fca5a5;" data-act="clear-pending">清空待记录</button>`:''}
+  </div>
+
+  <div class="card">
+    <div class="card-t"><h3>今日明细</h3><span class="sub">${todayExpenses.length} 笔</span></div>
+    ${todayExpenses.length>0?todayExpenses.map(e=>{
+      const cat=getCat(e.catId);
+      return `<div class="rec"><span class="rec-dot" style="background:${cat.color}"></span>
+        <div class="rec-mid"><div class="rec-name">${esc(e.name)}</div>
+        <div class="rec-meta"><span>${esc(cat.name)}</span>${cat.isFood?'<span>· 食物</span>':''}${cat.isJunk?'<span style="color:#fca5a5">· 垃圾</span>':''}</div></div>
+        <span class="rec-amt ${cat.isJunk?'bad':''}">¥${e.price}</span>
+        <button class="rec-rm" data-rm-expense="${e.id}">×</button>
+      </div>`;
+    }).join(''):'<div class="hint">今天还没有记录</div>'}
+    ${todayExpenses.length>0?`
+      <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;">
+        <span style="color:var(--muted);">用钱判定</span>
+        <span style="color:${moneyOk?'#86efac':'#fca5a5'};font-weight:600;">${moneyOk?'✓ 正常':'⚠ 含垃圾食品'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12.5px;">
+        <span style="color:var(--muted);">饮食判定</span>
+        <span style="color:${dietOk?'#86efac':'#fca5a5'};font-weight:600;">${dietOk?'✓ 正常':'⚠ 含垃圾食品'}</span>
+      </div>
+    `:''}
+  </div>
+
+  <div class="card">
+    <div class="task ${(jjChecked||isJJRelease)?'checked':''} ${jjChecked&&!rec.jingji.ok?'failed':''} ${isJJRelease&&!jjChecked?'auto':''}">
+      <div class="task-head"><div class="task-icon">🧘</div><div class="task-title"><h4>养精蓄锐</h4><p>第 ${jj.current}/${jj.cycleLength} 天${isJJRelease?' · 💧 释放日':''}</p></div></div>
+      <div class="jj-progress" style="margin-bottom:8px"><div class="jj-bar" style="width:${jjProgress}%"></div></div>
+      ${isJJRelease&&!jjChecked?`<div class="task-result jj">💧 今天是养精蓄锐释放日，自动视为打卡成功。</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="jingji">修改</button>`:''}`:!jjChecked?`<div class="chips" style="margin-bottom:8px"><div class="chip ${rec._jjPending==='ok'?'on':''}" data-jj-set="ok">坚持住了</div><div class="chip ${rec._jjPending==='broken'?'on':''}" data-jj-set="broken">破戒了</div></div><button class="task-btn full" data-checkin="jingji">打卡</button>`:`<div class="task-result ${rec.jingji.ok?'ok':'bad'}">${rec.jingji.msg||''}</div>${editMode?`<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px" data-reset="jingji">修改</button>`:''}`}
+    </div>
+  </div>
+
+  ${allCoreChecked&&!confirmed?`<div class="card" style="background:rgba(74,222,128,.08)"><div class="hint" style="margin-bottom:8px;">五项核心已打卡完成。</div><button class="btn btn-p" data-act="openConfirm">✓ 核对今天的打卡信息</button></div>`:''}
+  ${allCoreChecked&&confirmed?`<div class="card" style="text-align:center;color:#86efac;font-size:13px;">今天已确认 ✓</div>`:''}
+  ${editMode&&!confirmed?`<div class="card" style="background:rgba(251,191,36,.08)"><div class="hint" style="margin-bottom:8px;color:var(--gold);">修改模式</div><button class="btn btn-p" data-act="openConfirm">✓ 重新核对</button></div>`:''}
+
+  <div class="card">
+    <div class="card-t"><h3>大类管理</h3><button class="btn btn-p btn-sm" data-act="add-cat">＋ 新增大类</button></div>
+    <div class="hint" style="margin-bottom:8px;">「食物」大类进入饮食板块统计，「垃圾」大类会触发饮食异常。</div>
+    ${state.cats.map(c=>{
+      const tagCount=state.tags.filter(t=>t.catId===c.id).length;
+      return `<div class="rec"><span class="rec-dot" style="background:${c.color}"></span>
+        <div class="rec-mid"><div class="rec-name">${esc(c.name)}</div>
+        <div class="rec-meta">${c.isFood?'<span style="color:#86efac;">食物</span>':'<span>非食物</span>'}${c.isJunk?'<span style="color:#fca5a5;">垃圾</span>':''}<span>${tagCount} 个标签</span></div></div>
+        <button class="rec-edit" data-edit-cat="${c.id}">编辑</button>
+        <button class="rec-rm" data-rm-cat="${c.id}">×</button>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-t"><h3>标签管理</h3><button class="btn btn-p btn-sm" data-act="add-tag">＋ 新增标签</button></div>
+    <div class="hint" style="margin-bottom:8px;">点标签可改名称、价格、所属大类。</div>
+    ${state.cats.map(c=>{
+      const tags=state.tags.filter(t=>t.catId===c.id);
+      if(tags.length===0) return '';
+      return `<div class="cat-group">
+        <div class="cat-group-h"><span class="name"><i style="background:${c.color}"></i>${esc(c.name)}</span><span style="font-size:10px;color:var(--muted);">${tags.length} 个</span></div>
+        <div class="tag-list">
+          ${tags.map(t=>`<span class="tag-item" data-edit-tag="${t.id}">${esc(t.name)} ¥${t.price}<span class="rm" data-rm-tag="${t.id}">×</span></span>`).join('')}
+        </div>
+      </div>`;
+    }).join('')||'<div class="hint">还没有标签</div>'}
+  </div>`;
+}
+
+/* 补回 fitness 打卡处理（不覆盖原 doCheckin） */
+(function(){
+  var _prevDC = doCheckin;
+  doCheckin = function(project){
+    if(project === 'fitness'){
+      var today = todayStr();
+      var rec = getRecord(today);
+      if(!rec.wake || !rec.wake.fitness){ toast('起床未达标，无法健身打卡'); return; }
+      if(rec.fitness && rec.fitness.checked){ toast('健身已打卡'); return; }
+      pushUndo('打卡：健身');
+      rec.fitness = { checked: true, time: nowTimeStr() };
+      saveState(); render();
+      toast('健身打卡成功 ✓');
+      return;
+    }
+    return _prevDC(project);
+  };
+})();
+
+/* 确保 viewBirthdayCard 存在（旧版可能丢失） */
+if(typeof viewBirthdayCard !== 'function'){
+  function viewBirthdayCard(rec){
+    return `<div class="bd-hero">
+      <div class="bd-icon">🎂</div>
+      <div class="bd-title">生日快乐</div>
+      <div class="bd-sub">愿岁岁平安，万事胜意。<br>今天全部打卡豁免，好好享受。</div>
+      <div class="bd-tip"><b>🎉 今天可以做的事</b>· 吃一顿喜欢的<br>· 和重要的人待在一起<br>· 不用管任何打卡任务<br>· 早点休息，做个好梦</div>
+    </div>
+    <div class="card"><div class="card-t"><h3>今日打卡（生日豁免）</h3></div>
+      ${['🌙 睡觉','☀ 起床','💪 健身','📚 学习','💰 用钱','🥗 饮食','🧘 养精蓄锐'].map(x=>`
+        <div class="task bd-disabled"><div class="task-head"><div class="task-icon">${x.split(' ')[0]}</div><div class="task-title"><h4>${x.split(' ')[1]}</h4><p>生日卡豁免</p></div></div></div>`).join('')}
+    </div>`;
+  }
+}
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
