@@ -3533,6 +3533,129 @@ document.addEventListener('click', function(e){
     return;
   }
 }, true); /* 捕获阶段，优先于原有事件 */
+  /* ========== v14：起床规则最终版 ========== */
+/* 5:20前 → 达标 ✅
+   5:20~7:15 打卡 → 影响健身，连续2次进1天冷静期
+   7:15后未打卡 → 按钮自动关闭 + 直接进1天冷静期 */
+
+// 1. 起床打卡窗口延到 7:15
+inWakeWindow = function(){
+  var m = nowMin();
+  return m >= 4*60 && m < 7*60 + 15;
+};
+
+// 2. 7:15 后没打卡 → 自动判定失败
+autoCheckWakeFail = function(){
+  var today = todayStr();
+  var r = state.records[today];
+  if(r && r.wake && r.wake.checked) return;
+  if(nowMin() >= 7*60 + 15){
+    var rec = getRecord(today);
+    if(!rec.wake || !rec.wake.checked){
+      rec.wake = {
+        time: '07:15',
+        fitness: false,
+        msg: '超过7:15未打卡，自动失败 +1天冷静期',
+        checked: true,
+        autoFail: true
+      };
+      saveState(true);
+    }
+  }
+};
+
+// 3. computeSchedule 覆盖：区分两种起床失败
+computeSchedule = function(){
+  var result={};var today=todayStr();
+  var startDateStr=state.settings.startDate||today;
+  var d=parseD(startDateStr);var endDate=addDays(parseD(today),200);
+  var cooldownTotal=0,consecutiveGreen=0,wakeFailStreak=0,conservativeStreak=0,cycleDay=0,bigCycleDay=0,pendingRestKey=null,lastBigCycleComplete=0;
+  var jjCurrent=0,jjCycleLength=state.settings.jjInitial||10;
+  var restReschedule=state.restReschedule||{};
+  var guard=0;
+  while(d<=endDate&&guard++<1000){
+    var key=fmtDate(d);var rec=state.records[key];var isFuture=key>today;
+    var dayInfo={key:key,type:'future',cycleDay:0,isReward:false,isMealDay:false,isBirthday:false,isRest:false,isRestCandidate:false,cooldownRemaining:0,isJJRelease:false,isBigCycleComplete:false,cooldownBreakdown:null};
+    if(isBirthdayDate(key)) dayInfo.isBirthday=true;
+    if(!isFuture && rec){
+      if(rec.jingji&&rec.jingji.checked){
+        if(rec.jingji.ok===true){jjCurrent++;if(jjCurrent>=jjCycleLength){dayInfo.isJJRelease=true;jjCurrent=0;jjCycleLength+=(state.settings.jjIncrement||5);}}
+        else if(rec.jingji.broken){jjCurrent=0;}
+      } else {jjCurrent=0;}
+    } else if(isFuture){jjCurrent++;if(jjCurrent>=jjCycleLength){dayInfo.isJJRelease=true;jjCurrent=0;jjCycleLength+=(state.settings.jjIncrement||5);}}
+    if(pendingRestKey===key){
+      var resolution=state.restResolved[key];var delayedTo=restReschedule[key];
+      if(resolution==='delay'&&delayedTo){dayInfo.isRestCandidate=true;pendingRestKey=delayedTo;}
+      else {dayInfo.isRest=true;dayInfo.isRestConfirmed=resolution==='keep';result[key]=dayInfo;cycleDay=0;bigCycleDay=0;pendingRestKey=null;lastBigCycleComplete=0;d.setDate(d.getDate()+1);continue;}
+    }
+    var isDelayedRestDay=false;
+    for(var orig in restReschedule){if(restReschedule[orig]===key&&orig!==key){isDelayedRestDay=true;break;}}
+    if(isDelayedRestDay){dayInfo.isRest=true;dayInfo.isRestConfirmed=true;result[key]=dayInfo;cycleDay=0;bigCycleDay=0;pendingRestKey=null;lastBigCycleComplete=0;d.setDate(d.getDate()+1);continue;}
+    if(cooldownTotal>0){
+      dayInfo.type=isFuture?'future-cooldown':'cooldown';dayInfo.cooldownRemaining=cooldownTotal;
+      if(rec&&!isFuture){
+        if(isGreenForCooldown(rec,key,dayInfo.isJJRelease)){cooldownTotal--;consecutiveGreen++;if(consecutiveGreen>=2&&cooldownTotal>=3){cooldownTotal--;consecutiveGreen=0;}}
+        else {
+          consecutiveGreen=0;
+          var dayCd=getDayCooldown(rec,key);
+          if(dayCd.total>0){cooldownTotal+=dayCd.total;dayInfo.cooldownBreakdown=dayCd.breakdown;}
+          if(rec.wake && rec.wake.checked && !rec.wake.fitness){
+            if(rec.wake.autoFail){
+              cooldownTotal+=1;
+              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown=[];
+              dayInfo.cooldownBreakdown.push({name:'7:15后未打卡（起床超时）',days:1});
+              wakeFailStreak=0;
+            } else {
+              wakeFailStreak++;
+              if(wakeFailStreak>=2){
+                cooldownTotal+=1;
+                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown=[];
+                dayInfo.cooldownBreakdown.push({name:'连续2次5:20-7:15间起床',days:1});
+                wakeFailStreak=0;
+              }
+            }
+          } else {
+            wakeFailStreak=0;
+          }
+          if(rec.study&&rec.study.tier==='conservative'){conservativeStreak++;if(conservativeStreak>=3){cooldownTotal+=1;conservativeStreak=0;}} else {conservativeStreak=0;}
+        }
+        if(cooldownTotal<=0){cooldownTotal=0;consecutiveGreen=0;dayInfo.type='green';}
+      } else if(isFuture){cooldownTotal--;consecutiveGreen++;if(consecutiveGreen>=2&&cooldownTotal>=3){cooldownTotal--;consecutiveGreen=0;}if(cooldownTotal<=0){cooldownTotal=0;consecutiveGreen=0;}}
+    } else {
+      if(rec&&!isFuture){
+        if(isGreenForCycle(rec,key,dayInfo.isJJRelease)){cycleDay++;bigCycleDay++;dayInfo.type='green';dayInfo.cycleDay=cycleDay;if(cycleDay%8===4)dayInfo.isMealDay=true;if(cycleDay%8===0&&cycleDay>0)dayInfo.isReward=true;}
+        else if(rec.birthdayCard||rec.sick||rec.protect){dayInfo.type='partial';}
+        else {
+          dayInfo.type='partial';
+          var dayCd2=getDayCooldown(rec,key);
+          if(dayCd2.total>0){cooldownTotal+=dayCd2.total;dayInfo.cooldownBreakdown=dayCd2.breakdown;}
+          if(rec.wake && rec.wake.checked && !rec.wake.fitness){
+            if(rec.wake.autoFail){
+              cooldownTotal+=1;
+              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown=[];
+              dayInfo.cooldownBreakdown.push({name:'7:15后未打卡（起床超时）',days:1});
+              wakeFailStreak=0;
+            } else {
+              wakeFailStreak++;
+              if(wakeFailStreak>=2){
+                cooldownTotal+=1;
+                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown=[];
+                dayInfo.cooldownBreakdown.push({name:'连续2次5:20-7:15间起床',days:1});
+                wakeFailStreak=0;
+              }
+            }
+          } else {
+            wakeFailStreak=0;
+          }
+          if(rec.study&&rec.study.tier==='conservative'){conservativeStreak++;if(conservativeStreak>=3){cooldownTotal+=1;conservativeStreak=0;}} else {conservativeStreak=0;}
+        }
+      } else if(isFuture){cycleDay++;bigCycleDay++;dayInfo.type='future';dayInfo.cycleDay=cycleDay;if(cycleDay%8===4)dayInfo.isMealDay=true;if(cycleDay%8===0&&cycleDay>0)dayInfo.isReward=true;}
+    }
+    if(cycleDay>0 && cycleDay%32===0 && cycleDay!==lastBigCycleComplete){pendingRestKey=fmtDate(addDays(d,1));lastBigCycleComplete=cycleDay;dayInfo.isBigCycleComplete=true;}
+    result[key]=dayInfo;d.setDate(d.getDate()+1);
+  }
+  return result;
+};
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
