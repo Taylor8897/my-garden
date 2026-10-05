@@ -13,7 +13,7 @@ body.cold{--bg:#0a1520;--card:#0f2233;--card2:#14293d;--line:#1e3a52;--txt:#dbea
 body.rest{--bg:#1f1a2e;--card:#2a2440;--card2:#342c4c;--line:#403658;--txt:#f0e9ff;--muted:#a896c8;--dim:#6d5e8a;--accent:#c4b5fd;--accent2:#a78bfa;--gold:#fbbf24}
 body.bd-celebration{--bg:#2a0a0a;--card:#3d1010;--card2:#4a1515;--line:#6b2020;--txt:#fff0e0;--muted:#d49090;--dim:#8a4a4a;--accent:#ff4d4d;--accent2:#ff8833;--gold:#ffd700}
 html,body{height:100%}
-body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.5;overflow-x:hidden;-webkit-font-smoothing:antialiased;transition:background .8s,color .8s;min-height:100vh;padding-bottom:130px}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.5;overflow-x:hidden;-webkit-font-smoothing:antialiased;transition:background .8s,color .8s;padding-bottom:90px}
 .bg-sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1200px 600px at 50% -10%,rgba(74,222,128,.10),transparent 60%),linear-gradient(180deg,#0d1f14 0%,#0a1710 100%);transition:background .8s}
 body.cold .bg-sky{background:radial-gradient(1200px 600px at 50% -10%,rgba(96,165,250,.12),transparent 60%),linear-gradient(180deg,#0a1520 0%,#06101a 100%)}
 body.rest .bg-sky{background:radial-gradient(1200px 600px at 50% -10%,rgba(196,181,253,.15),transparent 60%),linear-gradient(180deg,#1f1a2e 0%,#15102a 100%)}
@@ -42,8 +42,8 @@ body.bd-celebration .topbar{background:rgba(42,10,10,.88)}
 .icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:15px;display:grid;place-items:center;cursor:pointer}
 .icon-btn:active{transform:scale(.92)}
 .icon-btn.on{color:var(--accent);border-color:rgba(74,222,128,.4)}
-.view{padding:12px 12px 40px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.view{padding:12px 12px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
 .card-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .card-t h3{font-size:14px;font-weight:600}
 .card-t .sub{font-size:11px;color:var(--muted)}
@@ -323,9 +323,6 @@ body.shake{animation:shake .5s}
 .activation-rules li b{color:var(--txt);font-weight:600}
 .activation-rules li.warn{color:#fca5a5}
 .activation-rules li.warn b{color:#fca5a5}
-.activation-today{background:linear-gradient(135deg,rgba(74,222,128,.12),rgba(34,197,94,.04));border:1px solid rgba(74,222,128,.3);border-radius:14px;padding:14px;text-align:center;margin-bottom:18px}
-.activation-today .lbl{font-size:11px;color:var(--muted);margin-bottom:4px}
-.activation-today .val{font-size:22px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
 .activation-check{display:flex;align-items:flex-start;gap:10px;padding:14px;background:var(--card2);border-radius:14px;margin-bottom:16px;border:1px solid var(--line);cursor:pointer;user-select:none}
 .activation-check input{width:20px;height:20px;margin-top:1px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .activation-check .lbl{font-size:12.5px;color:var(--muted);line-height:1.6}
@@ -346,7 +343,7 @@ body.shake{animation:shake .5s}
 .cd-quote{font-size:14px;color:#e8f5ec;min-height:22px;letter-spacing:1px;transition:opacity .3s}
 .cd-tip{font-size:11px;color:var(--dim);margin-top:16px}
 .cd-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-  .cd-stars::before,.cd-stars::after{content:'';position:absolute;top:0;left:50%;width:2px;height:2px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80,100px 200px 0 #4ade80,300px 100px 0 #fbbf24,500px 300px 0 #4ade80,200px 500px 0 #60a5fa,400px 600px 0 #fbbf24,600px 200px 0 #4ade80,700px 500px 0 #a78bfa,800px 300px 0 #4ade80,900px 600px 0 #60a5fa;animation:starMove 12s linear infinite}
+.cd-stars::before,.cd-stars::after{content:'';position:absolute;top:0;left:50%;width:2px;height:2px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80,100px 200px 0 #4ade80,300px 100px 0 #fbbf24,500px 300px 0 #4ade80,200px 500px 0 #60a5fa,400px 600px 0 #fbbf24,600px 200px 0 #4ade80,700px 500px 0 #a78bfa,800px 300px 0 #4ade80,900px 600px 0 #60a5fa;animation:starMove 12s linear infinite}
 .cd-stars::after{top:50%;left:20%;animation-duration:18s;animation-delay:-6s}
 @keyframes starMove{0%{transform:translate(0,0)}100%{transform:translate(-100vw,100vh)}}
 .unlock-welcome{position:fixed;inset:0;z-index:9997;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .6s;text-align:center}
@@ -369,7 +366,7 @@ body.shake{animation:shake .5s}
 </div>
 <div id="layer"></div>
 <div class="toast" id="toast"></div>
-  <script>
+<script>
 /* ============================================================
    工具函数
    ============================================================ */
@@ -467,8 +464,7 @@ function defaultState(){
       birthday: '',
       editLimitPerMonth: 3,
       jjInitial: 10,
-      jjIncrement: 5,
-      manualRestPlan: { date: '2026-10-09' }
+      jjIncrement: 5
     },
     birthdayCard: { used:false, usedDate:'', delayDate:'', delayResolved:false, prompted:false },
     records: {},
@@ -529,7 +525,6 @@ function saveState(silent){
   try { localStorage.setItem(LAST_CHANGE_KEY, String(lastLocalChange)); } catch(e){}
   scheduleCloudSync();
 }
-
 function pushUndo(label){
   try { undoStack.push({ label, snap: JSON.stringify(state) }); } catch(e){}
   if(undoStack.length > 12) undoStack.shift();
@@ -553,7 +548,7 @@ function getDayExpenses(d){ return state.expenses.filter(e => e.date===d); }
 function getDayFoods(d){ return state.expenses.filter(e => e.date===d && getCat(e.catId).isFood); }
 function isMoneyOk(d){ return !getDayExpenses(d).some(e => getCat(e.catId).isJunk); }
 function isDietOk(d){ return !getDayFoods(d).some(e => getCat(e.catId).isJunk); }
-
+</script>
 /* ============================================================
    云同步
    ============================================================ */
@@ -857,6 +852,24 @@ function isGreenForCycle(rec, d, jjR){
       && isMoneyOk(d) && isDietOk(d)
       && ((rec.jingji && rec.jingji.checked && rec.jingji.ok===true) || jjR===true);
 }
+function isBirthdayDate(dateKey){
+  if(!state.settings.birthday) return false;
+  const bd = parseD(state.settings.birthday);
+  const d = parseD(dateKey);
+  return bd.getMonth() === d.getMonth() && bd.getDate() === d.getDate();
+}
+function canUseBirthdayCard(checkDate){
+  if(!state.settings.birthday) return false;
+  if(state.birthdayCard.used) return false;
+  if(state.birthdayCard.delayResolved && state.birthdayCard.delayDate) return checkDate === state.birthdayCard.delayDate;
+  const bd = parseD(state.settings.birthday);
+  const cd = parseD(checkDate);
+  const y1 = new Date(cd.getFullYear(), bd.getMonth(), bd.getDate());
+  const y2 = new Date(cd.getFullYear()-1, bd.getMonth(), bd.getDate());
+  const y3 = new Date(cd.getFullYear()+1, bd.getMonth(), bd.getDate());
+  const diff = Math.min(Math.abs(diffDays(y1,cd)), Math.abs(diffDays(y2,cd)), Math.abs(diffDays(y3,cd)));
+  return diff <= BD_TOLERANCE;
+}
 
 /* ============================================================
    排程核心
@@ -937,16 +950,13 @@ function computeSchedule(){
       dayInfo.type = isFuture ? 'future-cooldown' : 'cooldown';
       dayInfo.cooldownRemaining = cooldownTotal;
       if(rec && !isFuture){
-        if(cooldownTotal < 3){
-          cooldownTotal--; consecutiveGreen = 0;
-          } else if(isGreenForCooldown(rec, key, dayInfo.isJJRelease)){
-            cooldownTotal--; consecutiveGreen++;
-            if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
-          } else {
-            consecutiveGreen = 0;
-            const dayCd = getDayCooldown(rec, key);
+        const _origCD = cooldownTotal;
+        const _isGreen = _origCD >= 3 && isGreenForCooldown(rec, key, dayInfo.isJJRelease);
+
+        if(!_isGreen){
+          // 累加新的失败
+          const dayCd = getDayCooldown(rec, key);
           if(dayCd.total > 0){ cooldownTotal += dayCd.total; dayInfo.cooldownBreakdown = dayCd.breakdown; }
-          // 起床
           if(rec.wake && rec.wake.checked && !rec.wake.fitness){
             if(rec.wake.autoFail){
               cooldownTotal += 1;
@@ -962,24 +972,36 @@ function computeSchedule(){
                 if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
                 dayInfo.cooldownBreakdown.push({ name:'连续2次起床超时', days:1 });
                 wakeFailStreak = 0;
-  }
-  }
-} else { wakeFailStreak = 0; }
+              }
+            }
+          } else { wakeFailStreak = 0; }
           if(rec.study && rec.study.tier === 'conservative'){
             conservativeStreak++;
             if(conservativeStreak >= 3){ cooldownTotal += 1; conservativeStreak = 0; }
           } else { conservativeStreak = 0; }
         }
-          if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
-        } else if(isFuture){
-          if(cooldownTotal >= 3){
-            cooldownTotal--; consecutiveGreen++;
-            if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
-          } else {
-            cooldownTotal--; consecutiveGreen = 0;
-          }
-          if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; }
+
+        if(_isGreen){
+          cooldownTotal--; consecutiveGreen++;
+          if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
+        } else if(_origCD < 3){
+          // 冷静期 ≤ 2 天，每天自然流逝 1 天
+          cooldownTotal--; consecutiveGreen = 0;
+        } else {
+          // 冷静期 ≥ 3 天但不全绿：不减，只累加
+          consecutiveGreen = 0;
         }
+
+        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
+      } else if(isFuture){
+        if(cooldownTotal >= 3){
+          cooldownTotal--; consecutiveGreen++;
+          if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
+        } else {
+          cooldownTotal--; consecutiveGreen = 0;
+        }
+        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; }
+      }
     } else {
       if(rec && !isFuture){
         if(isGreenForCycle(rec, key, dayInfo.isJJRelease)){
@@ -1032,37 +1054,11 @@ function computeSchedule(){
     d.setDate(d.getDate() + 1);
   }
 
-  // 手动休息日（10-09，跟随冷静期顺延）
-  if(state.settings.startDate && state.settings.manualRestPlan && state.settings.manualRestPlan.date){
-    const plan = state.settings.manualRestPlan;
-    const targetDays = diffDays(parseD(state.settings.startDate), parseD(plan.date)) + 1;
-    let count = 0;
-    let dd = parseD(state.settings.startDate);
-    for(let i=0;i<60;i++){
-      const k = fmtDate(dd);
-      if(!result[k]) break;
-      const inf = result[k];
-      const isCool = (inf.type === 'cooldown' || inf.type === 'future-cooldown');
-      if(!isCool && !inf.isRest){
-        count++;
-        if(count === targetDays){
-          result[k] = Object.assign({}, inf, {
-            type:'rest', isRest:true, isManualRest:true, isRestConfirmed:true,
-            isReward:false, isMealDay:false, isRestCandidate:false,
-            cooldownRemaining:0, isJJRelease:false, cooldownBreakdown:null
-          });
-          break;
-        }
-      }
-      dd = addDays(dd, 1);
-    }
-  }
-
   return result;
 }
 
 /* ============================================================
-   今日类型 / 自动失败 / 生日
+   今日类型 / 自动失败
    ============================================================ */
 function getTodayType(){
   let t = 'normal';
@@ -1094,24 +1090,6 @@ function autoCheckWakeFail(){
       saveState(true);
     }
   }
-}
-function isBirthdayDate(dateKey){
-  if(!state.settings.birthday) return false;
-  const bd = parseD(state.settings.birthday);
-  const d = parseD(dateKey);
-  return bd.getMonth() === d.getMonth() && bd.getDate() === d.getDate();
-}
-function canUseBirthdayCard(checkDate){
-  if(!state.settings.birthday) return false;
-  if(state.birthdayCard.used) return false;
-  if(state.birthdayCard.delayResolved && state.birthdayCard.delayDate) return checkDate === state.birthdayCard.delayDate;
-  const bd = parseD(state.settings.birthday);
-  const cd = parseD(checkDate);
-  const y1 = new Date(cd.getFullYear(), bd.getMonth(), bd.getDate());
-  const y2 = new Date(cd.getFullYear()-1, bd.getMonth(), bd.getDate());
-  const y3 = new Date(cd.getFullYear()+1, bd.getMonth(), bd.getDate());
-  const diff = Math.min(Math.abs(diffDays(y1,cd)), Math.abs(diffDays(y2,cd)), Math.abs(diffDays(y3,cd)));
-  return diff <= BD_TOLERANCE;
 }
 
 /* ============================================================
@@ -1188,7 +1166,7 @@ function moneyColor(spent){
   if(spent>=10) return { color:'#93c5fd', alpha:0.6 };
   return { color:'#bfdbfe', alpha:0.5 };
 }
-  /* ============================================================
+    /* ============================================================
    激活页 / 倒计时 / 解锁动画
    ============================================================ */
 function showActivationScreen(){
@@ -1329,8 +1307,8 @@ function playUnlockSequence(){
   setTimeout(() => welcome.classList.add('show'), 100);
   const topbar = document.querySelector('.topbar');
   if(topbar){ topbar.style.opacity = 0; topbar.style.transition = 'opacity .6s'; setTimeout(() => { topbar.style.opacity = 1; }, 400); }
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach((tab,i) => {
+  const tabBtns = document.querySelectorAll('.tab');
+  tabBtns.forEach((tab,i) => {
     tab.style.opacity = 0; tab.style.transform = 'translateY(20px) scale(0.8)';
     setTimeout(() => {
       tab.style.transition = 'all .5s cubic-bezier(.34,1.56,.64,1)';
@@ -1421,11 +1399,11 @@ function renderTabbar(){
   const icons = {
     home:'<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
     record:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+    cards:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/>',
     willpower:'<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
     emotion:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
     finance:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
     diet:'<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-    cards:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/>',
     me:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.8 4-5.6 7.5-5.6S18.3 16.2 19.5 20"/>'
   };
   const tabs = [['home','首页'],['record','记录'],['cards','卡包'],['willpower','意志'],['emotion','情绪'],['finance','资金'],['diet','饮食'],['me','我的']];
@@ -1598,7 +1576,7 @@ function showDelayDatePicker(dateKey){
 }
 
 /* ============================================================
-   日历卡片（嵌在首页）
+   日历卡片 + 冷静期来源卡片
    ============================================================ */
 function getCooldownSourcesSummary(){
   const sch = computeSchedule();
@@ -1608,13 +1586,9 @@ function getCooldownSourcesSummary(){
     const k = fmtDate(addDays(new Date(), i));
     const info = sch[k];
     if(!info) continue;
-    if(info.type === 'cooldown' || info.type === 'future-cooldown'){
-      hasCooldown = true;
-    }
+    if(info.type === 'cooldown' || info.type === 'future-cooldown'){ hasCooldown = true; }
     if(info.cooldownBreakdown && info.cooldownBreakdown.length){
-      info.cooldownBreakdown.forEach(b => {
-        all.push({ name: b.name, days: b.days });
-      });
+      info.cooldownBreakdown.forEach(b => { all.push({ name: b.name, days: b.days }); });
     }
   }
   if(!hasCooldown) return { hasCooldown:false, items:[] };
@@ -1638,13 +1612,11 @@ function renderCooldownSourcesCard(){
   return `
   <div class="card">
     <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">触发原因</span></div>
-    <div class="cool-detail" style="margin-top:0">
-      ${rowsHtml}
-    </div>
+    <div class="cool-detail" style="margin-top:0">${rowsHtml}</div>
     <div class="hint" style="margin-top:8px;">这些是导致你进入冷静期的原因，正常度过后冷静期会自动消失。</div>
   </div>`;
 }
-    function renderHomeCalendarCard(){
+function renderHomeCalendarCard(){
   if(!calCursor){ const d = parseD(todayStr()); calCursor = { y:d.getFullYear(), m:d.getMonth() }; }
   const { y, m } = calCursor;
   const first = new Date(y, m, 1);
@@ -1721,7 +1693,7 @@ function viewHome(){
 
   let alerts = [];
   if(info.type === 'cooldown' || info.type === 'future-cooldown')
-    alerts.push({ lv:'danger', ico:'❄', t:`冷静期中 · 剩余 ${info.cooldownRemaining||0} 天`, d:'五项全绿可减天' });
+    alerts.push({ lv:'danger', ico:'❄', t:`冷静期中 · 剩余 ${info.cooldownRemaining||0} 天`, d:'冷静期 ≥ 3 天时，全绿可减天' });
   if(info.isJJRelease)
     alerts.push({ lv:'purple', ico:'💧', t:'养精蓄锐释放日', d:'自动视为打卡成功' });
   if(info.isMealDay && !info.isReward)
@@ -1735,7 +1707,6 @@ function viewHome(){
 
   const items = getDayItems(rec, info, today);
   const jj = state.jj;
-  const jjProgress = jj.cycleLength > 0 ? (jj.current/jj.cycleLength*100) : 0;
   const todaySpent = state.expenses.filter(e => e.date === today).reduce((a,b) => a + (b.price||0), 0);
   const overallHeat = buildOverallHeatmap();
 
@@ -1772,11 +1743,7 @@ function viewHome(){
     <div class="heatmap">
       ${overallHeat.map(h => { const {color,alpha} = overallColor(h.score,h.total); return `<div class="heat-cell ${h.score>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ${h.score}/6">${h.day}</div>`; }).join('')}
     </div>
-    <div class="heat-grad">
-      <span>0/6</span>
-      <div class="bar" style="background:linear-gradient(90deg,#f87171,#fb923c,#fbbf24,#4ade80,#22c55e,#16a34a)"></div>
-      <span>6/6</span>
-    </div>
+    <div class="heat-grad"><span>0/6</span><div class="bar" style="background:linear-gradient(90deg,#f87171,#fb923c,#fbbf24,#4ade80,#22c55e,#16a34a)"></div><span>6/6</span></div>
   </div>
 
   <div class="card">
@@ -1888,7 +1855,7 @@ function viewRecord(){
       <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>${isReward?'奖励日 ≥7h正常':'10h+奖励 · 9-10h正常 · 8-9h保守'}</p></div></div>
       ${!studyChecked
         ? `<div style="display:flex;gap:8px"><input class="txt" type="number" step="0.1" id="in_study" placeholder="小时" value="${rec.study?.hours||''}" style="flex:1"><button class="task-btn" data-checkin="study">打卡</button></div>`
-        : `<div class="task-result ${rec.study.tier==='normal'||rec.study.tier==='reward'?'ok':'bad'}">${rec.study.hours}h · ${rec.study.label}${rec.study.goldenCard?' 🏅':''}</div>`}
+        : `<div class="task-result ${rec.study.tier==='normal'||rec.study.tier==='reward'?'ok':'bad'}">${rec.study.hours}h · ${rec.study.label}</div>`}
     </div>
   </div>
 
@@ -1897,11 +1864,7 @@ function viewRecord(){
     <div class="heatmap">
       ${studyHeat.map(h => { const {color,alpha} = studyColor(h.hours); return `<div class="heat-cell ${h.hours>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ${h.hours}h">${h.day}</div>`; }).join('')}
     </div>
-    <div class="heat-grad">
-      <span>0h</span>
-      <div class="bar" style="background:linear-gradient(90deg,#86efac,#4ade80,#22c55e,#16a34a,#15803d,#166534,#14532d)"></div>
-      <span>10h+</span>
-    </div>
+    <div class="heat-grad"><span>0h</span><div class="bar" style="background:linear-gradient(90deg,#86efac,#4ade80,#22c55e,#16a34a,#15803d,#166534,#14532d)"></div><span>10h+</span></div>
   </div>
 
   <div class="card">
@@ -2168,11 +2131,7 @@ function viewFinance(){
     <div class="heatmap">
       ${moneyHeat.map(h => { const {color,alpha} = moneyColor(h.spent); return `<div class="heat-cell ${h.spent>0?'has':''} ${h.isToday?'today':''}" style="background:${color};opacity:${alpha}" title="${h.date} · ¥${h.spent.toFixed(0)}">${h.day}</div>`; }).join('')}
     </div>
-    <div class="heat-grad">
-      <span>¥0</span>
-      <div class="bar" style="background:linear-gradient(90deg,#bfdbfe,#93c5fd,#60a5fa,#3b82f6,#1d4ed8,#1e40af,#1e3a8a)"></div>
-      <span>¥100+</span>
-    </div>
+    <div class="heat-grad"><span>¥0</span><div class="bar" style="background:linear-gradient(90deg,#bfdbfe,#93c5fd,#60a5fa,#3b82f6,#1d4ed8,#1e40af,#1e3a8a)"></div><span>¥100+</span></div>
   </div>
   <div class="card">
     <div class="card-t"><h3>预算设置</h3></div>
@@ -2240,7 +2199,7 @@ function viewDiet(){
 }
 
 /* ============================================================
-   卡包（含免死金牌）
+   卡包
    ============================================================ */
 function viewCards(){
   const defs = [
@@ -2252,37 +2211,7 @@ function viewCards(){
     {id:'reset',   icon:'🔄', name:'周期重置', cap:2}
   ];
   const canBd = canUseBirthdayCard(todayStr());
-  const today = todayStr();
-
-  // 免死金牌：2026-10-05 限定，一次性
-  const goldenAvailable = (today === '2026-10-05') && !state.settings.goldenCardUsed;
-  const goldenUsedToday = state.settings.goldenCardUsed && state.settings.goldenCardDate === today;
-  const showGolden = (today === '2026-10-05') || goldenUsedToday;
-
-  let goldenHtml = '';
-  if(showGolden){
-    goldenHtml = `
-    <div class="card" style="background:linear-gradient(135deg,#4a2a1a,#2a1a10);border:1.5px solid #fbbf24;position:relative;overflow:hidden">
-      <div style="position:absolute;inset:0;background:radial-gradient(400px 200px at 50% 0%,rgba(251,191,36,.25),transparent 70%);pointer-events:none"></div>
-      <div class="card-t" style="position:relative;z-index:2"><h3 style="color:#fbbf24">🏅 免死金牌</h3><span class="sub" style="color:#fbbf24">2026-10-05 限定</span></div>
-      <div style="text-align:center;font-size:56px;margin:8px 0;filter:drop-shadow(0 0 14px rgba(251,191,36,.8))">🏅</div>
-      <div style="font-size:12.5px;color:#ffd7c0;text-align:center;line-height:1.75;margin-bottom:14px;position:relative;z-index:2">
-        使用后：<br>
-        · 今日学习视为 <b style="color:#fbbf24">9 小时（正常档）</b><br>
-        · 冷静期立即取消<br>
-        · 休息日不会延后<br>
-        · 全天只限一次
-      </div>
-      <div style="position:relative;z-index:2">
-      ${goldenAvailable
-        ? '<button class="btn" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#2a1a10;font-weight:700" data-act="useGolden">🏅 使用免死金牌</button>'
-        : '<button class="btn" style="background:#3a3020;color:#8a7a50;font-weight:700" disabled>今天已使用过</button>'}
-      </div>
-    </div>`;
-  }
-
   return `
-  ${goldenHtml}
   <div class="card"><div class="card-t"><h3>我的卡包</h3><span class="sub">点击使用</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
       ${defs.map(c => {
@@ -2299,13 +2228,12 @@ function viewCards(){
   </div>
   <div class="card"><div class="card-t"><h3>说明</h3></div>
     <div style="font-size:12px;color:var(--muted);line-height:1.8;">
-      <p><b>保护卡</b>：抵消一次特殊情况，当天不进冷静期，不计入积累。</p>
-      <p><b>病假卡</b>：生病时豁免一天，不计入积累。</p>
-      <p><b>补签卡</b>：补最近3天中的一天，计入积累。</p>
-      <p><b>打扫卡</b>：学习档位减1h15min。</p>
-      <p><b>生日卡</b>：只能在生日前后10天内使用。使用后触发庆祝特效。</p>
-      <p><b>周期重置</b>：清空冷静期，从新周期开始。</p>
-      <p><b>🏅 免死金牌</b>：2026-10-05 限定，使用后学习视为9小时正常档。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🛡️ 保护卡（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>抵消一次特殊情况，当天不进冷静期，不计入积累。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🤒 病假卡（1 张）</b><br>冷却：7 天 · 条件：生病当天<br>豁免一天全部打卡，不计入积累。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">✒️ 补签卡（2 张）</b><br>冷却：7 天 · 条件：最近 3 天内<br>补签遗漏的一天，计入有效积累。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🧹 打扫卡（1 张）</b><br>冷却：7 天 · 条件：任意一天<br>学习档位减 1h15min。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🎂 生日卡（1 张）</b><br>条件：生日前后 10 天内<br>全天打卡全部豁免，触发庆祝特效。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🔄 周期重置（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>清空当前冷静期，从新周期开始。</p>
     </div>
   </div>`;
 }
@@ -2365,8 +2293,7 @@ function viewMe(){
     <button class="btn btn-g" style="margin-top:8px" data-act="importAll">导入数据</button>
   </div>`;
 }
-        
-/* ============================================================
+    /* ============================================================
    Toast / Sheet
    ============================================================ */
 function toast(m){
@@ -2384,138 +2311,6 @@ function openSheet(html, mount){
   if(mount) mount($('.sheet'));
 }
 function closeSheet(){ $('#layer').innerHTML = ''; }
-
-/* ============================================================
-   免死金牌 —— 金色光芒 + 强制学习9小时
-   ============================================================ */
-function playGoldenGlow(){
-  // 全屏金色爆闪
-  const glow = document.createElement('div');
-  glow.style.cssText = 'position:fixed;inset:0;z-index:9998;pointer-events:none;'
-    + 'background:radial-gradient(circle at 50% 50%,rgba(255,215,0,.95) 0%,rgba(255,200,50,.55) 25%,rgba(255,150,20,.15) 55%,transparent 75%);'
-    + 'animation:goldenFlash 2.8s cubic-bezier(.2,.9,.3,1) forwards';
-  document.body.appendChild(glow);
-  // 动态注入关键帧
-  if(!document.getElementById('goldenKeyframes')){
-    const st = document.createElement('style');
-    st.id = 'goldenKeyframes';
-    st.textContent = `
-      @keyframes goldenFlash{
-        0%{opacity:0;transform:scale(.2)}
-        15%{opacity:1;transform:scale(1.4)}
-        35%{opacity:1;transform:scale(1)}
-        60%{opacity:.85;transform:scale(1.15)}
-        100%{opacity:0;transform:scale(1.6)}
-      }
-      @keyframes goldRaySpin{
-        0%{transform:rotate(0);opacity:.9}
-        100%{transform:rotate(360deg);opacity:0}
-      }
-      @keyframes goldTextPop{
-        0%{transform:scale(.2) rotate(-20deg);opacity:0;filter:blur(20px)}
-        25%{transform:scale(1.5) rotate(6deg);opacity:1;filter:blur(0)}
-        50%{transform:scale(1.15) rotate(-3deg);opacity:1}
-        80%{transform:scale(1.3) rotate(2deg);opacity:1}
-        100%{transform:scale(2) rotate(0);opacity:0;filter:blur(10px)}
-      }
-    `;
-    document.head.appendChild(st);
-  }
-
-  // 旋转的金色光芒
-  const rays = document.createElement('div');
-  rays.style.cssText = 'position:fixed;left:50%;top:50%;width:800px;height:800px;margin:-400px 0 0 -400px;'
-    + 'pointer-events:none;z-index:9999;'
-    + 'background:conic-gradient(from 0deg,'
-    + 'rgba(255,215,0,.85) 0deg,rgba(255,215,0,0) 15deg,'
-    + 'rgba(255,235,120,.85) 30deg,rgba(255,215,0,0) 45deg,'
-    + 'rgba(255,215,0,.85) 60deg,rgba(255,215,0,0) 75deg,'
-    + 'rgba(255,235,120,.85) 90deg,rgba(255,215,0,0) 105deg,'
-    + 'rgba(255,215,0,.85) 120deg,rgba(255,215,0,0) 135deg,'
-    + 'rgba(255,235,120,.85) 150deg,rgba(255,215,0,0) 165deg,'
-    + 'rgba(255,215,0,.85) 180deg,rgba(255,215,0,0) 195deg,'
-    + 'rgba(255,235,120,.85) 210deg,rgba(255,215,0,0) 225deg,'
-    + 'rgba(255,215,0,.85) 240deg,rgba(255,215,0,0) 255deg,'
-    + 'rgba(255,235,120,.85) 270deg,rgba(255,215,0,0) 285deg,'
-    + 'rgba(255,215,0,.85) 300deg,rgba(255,215,0,0) 315deg,'
-    + 'rgba(255,235,120,.85) 330deg,rgba(255,215,0,0) 345deg,'
-    + 'rgba(255,215,0,.85) 360deg);'
-    + 'mask:radial-gradient(circle,transparent 30%,#000 40%,#000 70%,transparent 100%);'
-    + '-webkit-mask:radial-gradient(circle,transparent 30%,#000 40%,#000 70%,transparent 100%);'
-    + 'animation:goldRaySpin 3s cubic-bezier(.2,.9,.3,1) forwards';
-  document.body.appendChild(rays);
-
-  // 金色粒子爆炸
-  const goldColors = ['#ffd700','#fbbf24','#f59e0b','#fde68a','#fff8dc'];
-  for(let i=0;i<90;i++){
-    setTimeout(() => {
-      const p = document.createElement('div');
-      p.className = 'firework';
-      p.style.left = (25 + Math.random()*50) + '%';
-      p.style.top = (25 + Math.random()*50) + '%';
-      p.style.color = goldColors[Math.floor(Math.random()*goldColors.length)];
-      p.style.width = '10px'; p.style.height = '10px';
-      p.style.setProperty('--fx', ((Math.random()-0.5)*500).toFixed(0) + 'px');
-      p.style.setProperty('--fy', ((Math.random()-0.5)*500).toFixed(0) + 'px');
-      document.body.appendChild(p);
-      setTimeout(() => p.remove(), 2200);
-    }, i * 18);
-  }
-
-  // 大字
-  const text = document.createElement('div');
-  text.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:9999;'
-    + 'font-size:60px;font-weight:900;letter-spacing:14px;text-align:center;white-space:pre-line;'
-    + 'background:linear-gradient(135deg,#ffd700,#ff8833,#ff4d4d,#ffd700);background-size:300% 300%;'
-    + '-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;'
-    + 'filter:drop-shadow(0 0 30px rgba(255,215,0,.9)) drop-shadow(0 0 60px rgba(255,136,51,.7));'
-    + 'animation:goldTextPop 3.2s cubic-bezier(.2,.9,.3,1) forwards';
-  text.textContent = '🏅 免死金牌\n已生效';
-  document.body.appendChild(text);
-
-  setTimeout(() => { glow.remove(); rays.remove(); text.remove(); }, 3400);
-  document.body.classList.add('shake');
-  setTimeout(() => document.body.classList.remove('shake'), 500);
-}
-
-function useGoldenCard(){
-  const today = todayStr();
-  if(today !== '2026-10-05'){ toast('🏅 免死金牌仅 2026-10-05 可用'); return; }
-  if(state.settings.goldenCardUsed){ toast('🏅 今天已使用过免死金牌'); return; }
-  if(!confirm('使用 🏅 免死金牌？\n\n效果：今天学习视为 9 小时正常档\n冷静期取消 · 休息日不延后\n\n(全天仅一次)')) return;
-
-  pushUndo('使用免死金牌');
-
-  // 记录原学习时长
-  const rec = getRecord(today);
-  const originalHours = (rec.study && rec.study.hours) ? rec.study.hours : 0;
-
-  // 强制改为 9 小时正常档
-  rec.study = {
-    hours: 9,
-    tier: 'normal',
-    label: '正常（🏅免死金牌）',
-    msg: '🏅 免死金牌生效，视为 9 小时正常档',
-    checked: true,
-    goldenCard: true,
-    originalHours: originalHours
-  };
-
-  state.settings.goldenCardUsed = true;
-  state.settings.goldenCardDate = today;
-
-  // 如果今天还有冷静期(未来日期)，无需处理——computeSchedule 会自动重新推演
-
-  saveState();
-
-  // 先放动画，再刷新
-  playGoldenGlow();
-
-  setTimeout(() => {
-    render(false);
-    toast('🏅 免死金牌已生效 · 冷静期消失 · 休息日不延后');
-  }, 300);
-}
 
 /* ============================================================
    19:00 后进食违规弹窗
@@ -2723,6 +2518,7 @@ function doCheckin(project){
             const j2 = judgeSleep(t, reason);
             const rec2 = getRecord(today);
             rec2.sleep = { time:t, success:j2.success, msg:j2.msg, checked:true };
+            delete rec2.sleepReason;
             closeSheet(); saveState(); render();
             toast(j2.success ? '睡觉打卡 ✓ ' + j2.msg : '睡觉打卡 ✗ ' + j2.msg);
           };
@@ -2731,6 +2527,7 @@ function doCheckin(project){
       return;
     }
     rec.sleep = { time:t, success:j.success, msg:j.msg, checked:true };
+    delete rec.sleepReason;
     saveState(); render();
     toast(j.success ? '睡觉打卡成功 ✓ ' + t : '睡觉未达标');
     return;
@@ -2762,7 +2559,6 @@ function doCheckin(project){
     saveState(); render();
     if(j.tier.startsWith('cool')){
       toast('学习未达标 · ' + j.msg);
-      setTimeout(() => toast('💡 可去「卡包」使用 🏅 免死金牌'), 1600);
     } else if(j.tier === 'conservative'){
       toast('保守打卡，不计入积累');
     } else {
@@ -2800,7 +2596,6 @@ function downloadReport(type){
   const today = todayStr();
   const endDate = today;
   const startDate = fmtDate(addDays(parseD(today), -(days - 1)));
-
   const sch = computeSchedule();
   const dayList = [];
   for(let i = days - 1; i >= 0; i--){
@@ -2827,17 +2622,13 @@ function downloadReport(type){
       violations: dayViolations, expenseCount: dayExp.length
     });
   }
-
   const actionsInRange = state.actions.filter(a => a.date >= startDate && a.date <= endDate);
   const resistActions = actionsInRange.filter(a => a.type === 'resist');
   const restartActions = actionsInRange.filter(a => a.type === 'restart');
   const resistOK = resistActions.filter(a => a.result === 'success').length;
-  const resistFail = resistActions.filter(a => a.result === 'fail').length;
   const restartOK = restartActions.filter(a => a.result === 'success').length;
-  const restartFail = restartActions.filter(a => a.result === 'fail').length;
   const resistRate = resistActions.length ? Math.round(resistOK/resistActions.length*100) : 0;
   const restartRate = restartActions.length ? Math.round(restartOK/restartActions.length*100) : 0;
-
   const emoCnt = {}, srcCnt = {};
   actionsInRange.forEach(a => {
     (a.emotions||[]).forEach(e => emoCnt[e] = (emoCnt[e]||0)+1);
@@ -2847,14 +2638,12 @@ function downloadReport(type){
   const srcList = Object.entries(srcCnt).sort((a,b) => b[1]-a[1]);
   const maxEmo = Math.max(...emoList.map(x => x[1]), 1);
   const maxSrc = Math.max(...srcList.map(x => x[1]), 1);
-
   const totalSpent = dayList.reduce((a,b) => a + b.spent, 0);
   const totalFood = dayList.reduce((a,b) => a + b.foodCount, 0);
   const totalJunk = dayList.reduce((a,b) => a + b.junkCount, 0);
   const totalViolations = dayList.reduce((a,b) => a + b.violations.length, 0);
   const greenDays = dayList.filter(d => d.score >= 5).length;
   const perfectDays = dayList.filter(d => d.score === 6).length;
-
   const title = isSmall ? '小周期报告' : '大周期报告';
   const html = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2897,22 +2686,15 @@ td.ok{color:#86efac}
 <div class="wrap">
 <h1>🌱 自律花园 · ${title}</h1>
 <div class="sub">周期：${startDate} 至 ${endDate}（共 ${days} 天）</div>
-
-<div class="card">
-<h2>📊 核心数据</h2>
-<div class="grid">
+<div class="card"><h2>📊 核心数据</h2><div class="grid">
 <div class="cell"><div class="lbl">全绿天数</div><div class="val">${perfectDays}</div></div>
 <div class="cell"><div class="lbl">≥5/6 天数</div><div class="val">${greenDays}</div></div>
 <div class="cell"><div class="lbl">抵抗成功</div><div class="val">${resistOK}</div></div>
 <div class="cell"><div class="lbl">重启成功</div><div class="val">${restartOK}</div></div>
 <div class="cell"><div class="lbl">情绪记录</div><div class="val">${actionsInRange.length}</div></div>
 <div class="cell"><div class="lbl">19点违规</div><div class="val" style="color:${totalViolations>0?'#fca5a5':'#4ade80'}">${totalViolations}</div></div>
-</div>
-</div>
-
-<div class="card">
-<h2>📅 每日完成度热力图</h2>
-<div class="heatmap">
+</div></div>
+<div class="card"><h2>📅 每日完成度热力图</h2><div class="heatmap">
 ${dayList.map(d => {
   let bg = 'rgba(255,255,255,.04)';
   if(d.score >= 6) bg = '#16a34a';
@@ -2923,12 +2705,8 @@ ${dayList.map(d => {
   else if(d.score === 1) bg = '#f87171';
   return `<div class="heat-cell" style="background:${bg}" title="${d.date} · ${d.score}/6">${d.day}</div>`;
 }).join('')}
-</div>
-<div style="font-size:11px;color:#7fa88a;margin-top:6px;">红→黄→绿 表示完成度；深绿=全绿</div>
-</div>
-
-<div class="card">
-<h2>📋 每日详情</h2>
+</div></div>
+<div class="card"><h2>📋 每日详情</h2>
 <table><thead><tr><th>日期</th><th>睡觉</th><th>起床</th><th class="num">学习</th><th class="num">花费</th><th class="num">食物</th><th class="num">垃圾</th><th class="num">得分</th></tr></thead><tbody>
 ${dayList.map(d => `<tr>
 <td>${d.date.slice(5)} 周${['日','一','二','三','四','五','六'][parseD(d.date).getDay()]}</td>
@@ -2940,11 +2718,8 @@ ${dayList.map(d => `<tr>
 <td class="num ${d.junkCount>0?'bad':''}">${d.junkCount>0?d.junkCount:'—'}</td>
 <td class="num ${d.score>=5?'ok':(d.score<=2?'bad':'')}">${d.score}/6</td>
 </tr>`).join('')}
-</tbody></table>
-</div>
-
-<div class="card">
-<h2>💪 意志力表现</h2>
+</tbody></table></div>
+<div class="card"><h2>💪 意志力表现</h2>
 <div class="grid" style="margin-bottom:12px">
 <div class="cell"><div class="lbl">抵抗记录</div><div class="val">${resistActions.length}</div></div>
 <div class="cell"><div class="lbl">抵抗成功率</div><div class="val">${resistRate}%</div></div>
@@ -2959,37 +2734,24 @@ ${actionsInRange.length ? actionsInRange.slice(0,20).map(a => `
 ${a.note ? `<div style="color:#7fa88a;font-size:11.5px;margin-top:4px;font-style:italic">"${esc(a.note)}"</div>` : ''}
 </div>`).join('') : '<div style="color:#7fa88a;font-size:12.5px">此周期内没有意志力记录</div>'}
 </div>
-
-${emoList.length ? `<div class="card">
-<h2>💭 情绪分布</h2>
+${emoList.length ? `<div class="card"><h2>💭 情绪分布</h2>
 ${emoList.map(([name, cnt]) => `<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxEmo*100}%"></div></div><span class="bar-cnt">${cnt}</span></div>`).join('')}
 </div>` : ''}
-
-${srcList.length ? `<div class="card">
-<h2>🎯 源头分布</h2>
+${srcList.length ? `<div class="card"><h2>🎯 源头分布</h2>
 ${srcList.map(([name, cnt]) => `<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxSrc*100}%;background:linear-gradient(90deg,#60a5fa,#3b82f6)"></div></div><span class="bar-cnt">${cnt}</span></div>`).join('')}
 </div>` : ''}
-
-<div class="card">
-<h2>💰 资金 & 饮食</h2>
-<div class="grid">
+<div class="card"><h2>💰 资金 & 饮食</h2><div class="grid">
 <div class="cell"><div class="lbl">总花费</div><div class="val" style="color:#8fb0ff">¥${totalSpent.toFixed(0)}</div></div>
 <div class="cell"><div class="lbl">食物项</div><div class="val" style="color:#86efac">${totalFood}</div></div>
 <div class="cell"><div class="lbl">垃圾食品</div><div class="val" style="color:${totalJunk>0?'#fca5a5':'#86efac'}">${totalJunk}</div></div>
 <div class="cell"><div class="lbl">平均每日</div><div class="val" style="color:#8fb0ff">¥${(totalSpent/days).toFixed(0)}</div></div>
-</div>
-</div>
-
-${totalViolations > 0 ? `<div class="card">
-<h2>⚠️ 19:00 后违规记录</h2>
+</div></div>
+${totalViolations > 0 ? `<div class="card"><h2>⚠️ 19:00 后违规记录</h2>
 ${state.violations.filter(v => v.date >= startDate && v.date <= endDate).map(v => `<div class="action-item fail"><div class="head"><span>${v.date} ${v.time}</span><span>${v.isEmergency?'紧急例外':'违规'}</span></div><div>${esc(v.itemName)}</div>${v.note ? `<div style="color:#7fa88a;font-size:11.5px">${esc(v.note)}</div>` : ''}</div>`).join('')}
 </div>` : ''}
-
 <div class="cheer">${perfectDays >= days * 0.7 ? '🎉 太棒了！继续保持！' : perfectDays >= days * 0.4 ? '💪 稳中有进，继续加油！' : '🌱 跌倒了也要爬起来，记录本身就是进步'}</div>
-
 <div class="footer">由 自律花园 生成 · ${new Date().toLocaleString('zh-CN')}</div>
 </div></body></html>`;
-
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3005,78 +2767,10 @@ ${state.violations.filter(v => v.date >= startDate && v.date <= endDate).map(v =
 /* ============================================================
    全局点击事件
    ============================================================ */
-/* ============================================================
-   卡包
-   ============================================================ */
-function viewCards(){
-  const defs = [
-    {id:'protect', icon:'🛡️', name:'保护卡', cap:2},
-    {id:'sick',    icon:'🤒', name:'病假卡', cap:1},
-    {id:'makeup',  icon:'✒️', name:'补签卡', cap:2},
-    {id:'clean',   icon:'🧹', name:'打扫卡', cap:1},
-    {id:'birthday',icon:'🎂', name:'生日卡', cap:1},
-    {id:'reset',   icon:'🔄', name:'周期重置', cap:2}
-  ];
-  const canBd = canUseBirthdayCard(todayStr());
-  const today = todayStr();
-  const goldenAvailable = (today === '2026-10-05') && !state.settings.goldenCardUsed;
-  const goldenUsedToday = state.settings.goldenCardUsed && state.settings.goldenCardDate === today;
-  const showGolden = (today === '2026-10-05') || goldenUsedToday;
-  let goldenHtml = '';
-  if(showGolden){
-    goldenHtml = `
-    <div class="card" style="background:linear-gradient(135deg,#4a2a1a,#2a1a10);border:1.5px solid #fbbf24;position:relative;overflow:hidden">
-      <div style="position:absolute;inset:0;background:radial-gradient(400px 200px at 50% 0%,rgba(251,191,36,.25),transparent 70%);pointer-events:none"></div>
-      <div class="card-t" style="position:relative;z-index:2"><h3 style="color:#fbbf24">🏅 免死金牌</h3><span class="sub" style="color:#fbbf24">2026-10-05 限定</span></div>
-      <div style="text-align:center;font-size:56px;margin:8px 0;filter:drop-shadow(0 0 14px rgba(251,191,36,.8))">🏅</div>
-      <div style="font-size:12.5px;color:#ffd7c0;text-align:center;line-height:1.75;margin-bottom:14px;position:relative;z-index:2">
-        使用后：<br>
-        · 今日学习视为 <b style="color:#fbbf24">9 小时（正常档）</b><br>
-        · 冷静期立即取消<br>
-        · 休息日不会延后<br>
-        · 全天只限一次
-      </div>
-      <div style="position:relative;z-index:2">
-      ${goldenAvailable
-        ? '<button class="btn" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#2a1a10;font-weight:700" data-act="useGolden">🏅 使用免死金牌</button>'
-        : '<button class="btn" style="background:#3a3020;color:#8a7a50;font-weight:700" disabled>今天已使用过</button>'}
-      </div>
-    </div>`;
-  }
-  return `
-  ${goldenHtml}
-  <div class="card"><div class="card-t"><h3>我的卡包</h3><span class="sub">点击使用</span></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      ${defs.map(c => {
-        const n = state.cards[c.id] || 0;
-        let disabled = n <= 0;
-        if(c.id === 'birthday'){ if(state.birthdayCard.used) disabled = true; else if(!canBd) disabled = true; }
-        return `<div style="background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;${disabled?'opacity:.3;pointer-events:none':''}" data-card="${c.id}">
-          <div style="font-size:22px;margin-bottom:4px">${c.icon}</div>
-          <div style="font-size:11px;font-weight:600;margin-bottom:2px">${c.name}</div>
-          <div style="font-size:10.5px;color:var(--gold);font-weight:700">${c.id==='birthday'&&state.birthdayCard.used?'已用':n}<small style="color:var(--muted);font-weight:400;font-size:9px">/${c.cap}</small></div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>
-  <div class="card"><div class="card-t"><h3>说明</h3></div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.8;">
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🛡️ 保护卡（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>抵消一次特殊情况，当天不进冷静期，不计入积累。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🤒 病假卡（1 张）</b><br>冷却：7 天 · 条件：生病当天<br>豁免一天全部打卡，不计入积累。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">✒️ 补签卡（2 张）</b><br>冷却：7 天 · 条件：最近 3 天内<br>补签遗漏的一天，计入有效积累。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🧹 打扫卡（1 张）</b><br>冷却：7 天 · 条件：任意一天<br>学习档位减 1h15min。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🎂 生日卡（1 张）</b><br>条件：生日前后 10 天内<br>全天打卡全部豁免，触发庆祝特效。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🔄 周期重置（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>清空当前冷静期，从新周期开始。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--gold)">🏅 免死金牌（2026-10-05 限定）</b><br>条件：仅当天<br>学习视为 9 小时正常档，冷静期取消，休息日不延后。</p>
-    </div>
-  </div>`;
-}
-  document.addEventListener('click', e => {
-  // Tab
+document.addEventListener('click', e => {
   const tab = e.target.closest('.tab');
   if(tab){ activeTab = tab.dataset.tab; scrollPos = 0; render(false); window.scrollTo(0,0); return; }
 
-  // 撤销
   if(e.target.closest('#undoBtn')){ doUndo(); return; }
 
   const el = e.target.closest('[data-act],[data-date],[data-checkin],[data-reset],[data-add-tag],[data-jj-set],[data-sleep-reason],[data-card],[data-rm-tag],[data-edit-tag],[data-rm-cat],[data-edit-cat],[data-rm-pending],[data-rm-expense],[data-future]');
@@ -3084,14 +2778,12 @@ function viewCards(){
 
   if(el.dataset.future !== undefined){ toast('不能查看未来的日期'); return; }
 
-  // 待记录删除
   if(el.dataset.rmPending !== undefined){
     e.stopPropagation();
     const r = getRecord(todayStr());
     if(r._moneyPending) r._moneyPending = r._moneyPending.filter(p => p.id !== el.dataset.rmPending);
     saveState(); render(); return;
   }
-  // 支出删除
   if(el.dataset.rmExpense !== undefined){
     e.stopPropagation();
     if(confirm('删除这条记录？')){
@@ -3101,7 +2793,6 @@ function viewCards(){
     }
     return;
   }
-  // 标签点击（加到 pending）
   if(el.dataset.addTag !== undefined){
     const tag = getTag(el.dataset.addTag); if(!tag) return;
     const cat = getCat(tag.catId);
@@ -3116,7 +2807,6 @@ function viewCards(){
     toast(`已添加：${tag.name} ¥${tag.price}${cat.isJunk?' ⚠':''}`);
     return;
   }
-  // 删标签
   if(el.dataset.rmTag !== undefined){
     e.stopPropagation();
     const t = getTag(el.dataset.rmTag);
@@ -3127,7 +2817,6 @@ function viewCards(){
     }
     return;
   }
-  // 编辑标签
   if(el.dataset.editTag !== undefined && !e.target.closest('[data-rm-tag]')){
     const tag = getTag(el.dataset.editTag); if(!tag) return;
     const catOpts = state.cats.map(c => {
@@ -3155,7 +2844,6 @@ function viewCards(){
     });
     return;
   }
-  // 删大类
   if(el.dataset.rmCat !== undefined){
     const id = el.dataset.rmCat;
     const cat = getCat(id);
@@ -3168,7 +2856,6 @@ function viewCards(){
     }
     return;
   }
-  // 编辑大类
   if(el.dataset.editCat !== undefined){
     const cat = getCat(el.dataset.editCat);
     openSheet(`
@@ -3204,7 +2891,6 @@ function viewCards(){
     });
     return;
   }
-  // 打卡相关
   if(el.dataset.checkin !== undefined){ doCheckin(el.dataset.checkin); return; }
   if(el.dataset.reset !== undefined){ const r = getRecord(todayStr()); if(r[el.dataset.reset]) delete r[el.dataset.reset]; saveState(); render(); toast('已重置'); return; }
   if(el.dataset.jjSet !== undefined){ const r = getRecord(todayStr()); r._jjPending = el.dataset.jjSet; saveState(); render(); return; }
@@ -3213,27 +2899,19 @@ function viewCards(){
 
   const act = el.dataset.act; if(!act) return;
 
-  // ==== 免死金牌 ====
-  if(act === 'useGolden'){ useGoldenCard(); return; }
-
-  // ==== 页面跳转 / 日历 ====
   if(act === 'goRecord'){ activeTab='record'; scrollPos=0; render(false); window.scrollTo(0,0); return; }
   if(act === 'calPrev'){ calCursor.m--; if(calCursor.m < 0){ calCursor.m = 11; calCursor.y--; } render(); return; }
   if(act === 'calNext'){ calCursor.m++; if(calCursor.m > 11){ calCursor.m = 0; calCursor.y++; } render(); return; }
 
-  // ==== 弹窗 / 确认 ====
   if(act === 'openConfirm'){ showConfirmSheet(); return; }
   if(act === 'openRestChoice'){ showRestChoice(todayStr()); return; }
 
-  // ==== 意志力/重启 ====
   if(act === 'willTab'){ willTab = el.dataset.v; render(false); return; }
   if(act === 'addAction'){ showActionDialog(el.dataset.t); return; }
 
-  // ==== 奖励卡 ====
   if(act === 'useCard'){ if(!confirm('确认使用这张奖励卡？')) return; resolveCard(el.dataset.id, 'use'); return; }
   if(act === 'declineCard'){ if(!confirm('不用这张卡？你将获得 +1 意志力成功！')) return; resolveCard(el.dataset.id, 'decline'); return; }
 
-  // ==== 用钱 / 饮食 ====
   if(act === 'add-manual'){
     const amt = parseFloat($('#in_amt').value);
     if(!amt || amt <= 0){ toast('请输入金额'); return; }
@@ -3258,7 +2936,6 @@ function viewCards(){
   }
   if(act === 'clear-pending'){ const r = getRecord(todayStr()); r._moneyPending = []; saveState(); render(); toast('已清空'); return; }
 
-  // ==== 大类 / 标签新增 ====
   if(act === 'add-cat'){
     openSheet(`
       <h3>新增大类</h3>
@@ -3323,7 +3000,6 @@ function viewCards(){
     return;
   }
 
-  // ==== 预算 / 设置 ====
   if(act === 'saveBudget'){
     const b = parseFloat($('#inBudget').value);
     if(!b || b <= 0){ toast('请输入有效预算'); return; }
@@ -3346,7 +3022,6 @@ function viewCards(){
     return;
   }
 
-  // ==== 数据备份 ====
   if(act === 'exportAll'){
     const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
     const url = URL.createObjectURL(blob);
@@ -3377,7 +3052,6 @@ function viewCards(){
     return;
   }
 
-  // ==== 报告 ====
   if(act === 'downloadSmallReport'){
     const sch = computeSchedule();
     const info = sch[todayStr()] || {};
@@ -3393,7 +3067,6 @@ function viewCards(){
     return;
   }
 
-  // ==== 云同步 ====
   if(act === 'copySyncCode'){
     const txt = syncUserId;
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -3432,7 +3105,7 @@ function viewCards(){
 });
 
 /* ============================================================
-   卡包使用（保护/病假/补签/打扫/生日/重置）
+   卡包使用
    ============================================================ */
 function useCard(id){
   if(state.cards[id] <= 0){ toast('这张卡用完了'); return; }
@@ -3490,9 +3163,6 @@ function migrate(){
     state.settings.startTimestamp = state.settings.startDate ? parseD(state.settings.startDate).getTime() : 0;
   if(state.settings.unlockAnimationPlayed === undefined)
     state.settings.unlockAnimationPlayed = !!state.settings.startDate;
-  if(state.settings.goldenCardUsed === undefined) state.settings.goldenCardUsed = false;
-  if(state.settings.goldenCardDate === undefined) state.settings.goldenCardDate = '';
-  if(state.settings.manualRestPlan === undefined) state.settings.manualRestPlan = { date: '2026-10-09' };
   if(state.enabled === undefined) state.enabled = false;
   if(state.activated === undefined) state.activated = !!state.settings.startDate;
   if(!state.records) state.records = {};
@@ -3520,7 +3190,6 @@ function migrate(){
    启动
    ============================================================ */
 (function(){
-  // 读取本地
   try {
     const raw = localStorage.getItem(LS_STATE);
     if(raw){ state = JSON.parse(raw); migrate(); }
@@ -3530,28 +3199,18 @@ function migrate(){
     state = defaultState();
   }
 
-  // 安全保护
   if(!state) state = defaultState();
 
-  // 起床自动失败检查（仅当 state 已就绪）
-try {
+  try {
     if(state.enabled && state.settings.startDate){
-      const _tr = state.records[todayStr()];
-      if(_tr && _tr.wake && _tr.wake.autoFail && _tr.wake.time === '07:05'){
-        delete _tr.wake;
-        saveState(true);
-      }
       autoCheckWakeFail();
     }
   } catch(e){ console.error('autoCheckWakeFail', e); }
 
-  // 首次渲染
   try { render(false); } catch(e){ console.error('首次渲染出错:', e); }
 
-  // 允许云同步
   booted = true;
 
-  // 3 秒后拉取云端
   setTimeout(function(){
     try {
       cloudPull(false).then(res => { if(res.pulled) render(false); });
