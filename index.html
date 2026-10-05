@@ -548,7 +548,7 @@ function getDayExpenses(d){ return state.expenses.filter(e => e.date===d); }
 function getDayFoods(d){ return state.expenses.filter(e => e.date===d && getCat(e.catId).isFood); }
 function isMoneyOk(d){ return !getDayExpenses(d).some(e => getCat(e.catId).isJunk); }
 function isDietOk(d){ return !getDayFoods(d).some(e => getCat(e.catId).isJunk); }
-</script>
+
 /* ============================================================
    云同步
    ============================================================ */
