@@ -2838,11 +2838,7 @@ computeSchedule = function(){
   /* ========== 微调 v6：日历往后翻 + 手动休息日跟随周期 ========== */
 (function(){
   // A. 去掉日历"下一月"按钮的禁用限制
-  var _origRHCC = renderHomeCalendarCard;
-  renderHomeCalendarCard = function(){
-    var html = _origRHCC();
-    return html.replace(/<button data-act="calNext"[^>]*>/g, '<button data-act="calNext">');
-  };
+  /* v6-A 已废弃（与 v17 冲突，v17 已重写 renderHomeCalendarCard） */
   // B. 拦截翻月点击
   document.addEventListener('click', function(e){
     var el = e.target.closest('[data-act]');
