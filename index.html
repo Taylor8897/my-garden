@@ -416,7 +416,19 @@ const TIERS_RESTART = [
 ];
 
 function inSleepWindow(){ const m = nowMin(); return m >= SLEEP_WINDOW.start || m < SLEEP_WINDOW.end; }
-function inWakeWindow(){ const m = nowMin(); return m >= 4*60 && m < 7*60 + 15; }
+function inWakeWindow(){
+  const m = nowMin();
+  let type = 'normal';
+  try {
+    const sch = computeSchedule();
+    const info = sch[todayStr()] || {};
+    if(info.isRest) type = 'rest';
+    else if(info.isReward) type = 'reward';
+  } catch(e){}
+  if(type === 'rest') return true;
+  if(type === 'reward') return m >= 4*60 && m < 9*60;
+  return m >= 4*60 && m < 7*60 + 15;
+}
 
 /* ============================================================
    云同步配置
@@ -1784,7 +1796,7 @@ function viewRecord(){
   const todaySpent = todayExpenses.reduce((a,b) => a + (b.price||0), 0);
   const studyHeat = buildStudyHeatmap();
   const wakeWindowLabel = isReward ? '窗口：4:00-9:00' : '窗口：4:00-7:15';
-  const wakeDesc = isReward ? '奖励日 7:20 前达标可健身' : '5:20前点击，联动健身';
+  const wakeDesc = isReward ? '窗口 4:00-9:00 · 7:20 前达标可健身' : '窗口 4:00-7:15 · 5:20 前达标可健身';
 
   let banners = '';
   if(info.isRestCandidate && !state.restResolved[today]){
@@ -3471,8 +3483,13 @@ function migrate(){
   if(!state) state = defaultState();
 
   // 起床自动失败检查（仅当 state 已就绪）
-  try {
+try {
     if(state.enabled && state.settings.startDate){
+      const _tr = state.records[todayStr()];
+      if(_tr && _tr.wake && _tr.wake.autoFail && _tr.wake.time === '07:05'){
+        delete _tr.wake;
+        saveState(true);
+      }
       autoCheckWakeFail();
     }
   } catch(e){ console.error('autoCheckWakeFail', e); }
