@@ -4222,7 +4222,51 @@ computeSchedule = function(){
   // 6. 重跑一次起床检查
   try{ window.autoCheckWakeFail(); }catch(e){}
 })();
+/* ========== v18：起床描述修正 + 主动判定今天 ========== */
+(function(){
+  /* 1. viewRecord 起床描述根据今日类型动态显示 */
+  var _v18_prevVR = window.viewRecord;
+  window.viewRecord = function(){
+    var html = _v18_prevVR();
+    try{
+      var type = 'normal';
+      try{
+        var sch = computeSchedule();
+        var info = sch[todayStr()] || {};
+        if(info.isRest) type = 'rest';
+        else if(info.isReward) type = 'reward';
+      }catch(e){}
 
+      var wakeTitle = '5:20前点击，联动健身';
+      var wakeWindow = '窗口：4:00-7:15';
+      if(type === 'rest'){
+        wakeTitle = '休息日随便记';
+        wakeWindow = '窗口：全天';
+      } else if(type === 'reward'){
+        wakeTitle = '奖励日 7:20 前达标可健身';
+        wakeWindow = '窗口：4:00-9:00';
+      }
+
+      html = html.replace(/5:20前点击，联动健身/g, wakeTitle);
+      html = html.replace(/窗口：4:00-7:00/g, wakeWindow);
+    }catch(e){ console.error('v18 viewRecord', e); }
+    return html;
+  };
+
+  /* 2. 页面加载后强制重跑一次起床判定并重渲 */
+  setTimeout(function(){
+    try{
+      if(!state || !state.enabled || !state.settings.startDate) return;
+      if(typeof autoCheckWakeFail === 'function'){
+        autoCheckWakeFail();
+        saveState(true);
+      }
+      if(typeof render === 'function'){
+        render(false);
+      }
+    }catch(e){ console.error('v18 autoCheck error', e); }
+  }, 1500);
+})();
 /* ========== 启动 ========== */
 (function(){
   const raw=localStorage.getItem(LS_STATE);
