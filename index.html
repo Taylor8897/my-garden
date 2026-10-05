@@ -937,12 +937,14 @@ function computeSchedule(){
       dayInfo.type = isFuture ? 'future-cooldown' : 'cooldown';
       dayInfo.cooldownRemaining = cooldownTotal;
       if(rec && !isFuture){
-        if(isGreenForCooldown(rec, key, dayInfo.isJJRelease)){
-          cooldownTotal--; consecutiveGreen++;
-          if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
-        } else {
-          consecutiveGreen = 0;
-          const dayCd = getDayCooldown(rec, key);
+        if(cooldownTotal < 3){
+          cooldownTotal--; consecutiveGreen = 0;
+          } else if(isGreenForCooldown(rec, key, dayInfo.isJJRelease)){
+            cooldownTotal--; consecutiveGreen++;
+            if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
+          } else {
+            consecutiveGreen = 0;
+            const dayCd = getDayCooldown(rec, key);
           if(dayCd.total > 0){ cooldownTotal += dayCd.total; dayInfo.cooldownBreakdown = dayCd.breakdown; }
           // 起床
           if(rec.wake && rec.wake.checked && !rec.wake.fitness){
@@ -968,12 +970,17 @@ function computeSchedule(){
             if(conservativeStreak >= 3){ cooldownTotal += 1; conservativeStreak = 0; }
           } else { conservativeStreak = 0; }
         }
-        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
-      } else if(isFuture){
-        cooldownTotal--; consecutiveGreen++;
-        if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
-        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; }
-      }
+                 } else { conservativeStreak = 0; }
+          if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
+        } else if(isFuture){
+          if(cooldownTotal >= 3){
+            cooldownTotal--; consecutiveGreen++;
+            if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
+          } else {
+            cooldownTotal--; consecutiveGreen = 0;
+          }
+          if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; }
+        }
     } else {
       if(rec && !isFuture){
         if(isGreenForCycle(rec, key, dayInfo.isJJRelease)){
@@ -1594,7 +1601,51 @@ function showDelayDatePicker(dateKey){
 /* ============================================================
    日历卡片（嵌在首页）
    ============================================================ */
-function renderHomeCalendarCard(){
+function getCooldownSourcesSummary(){
+  const sch = computeSchedule();
+  const all = [];
+  let hasCooldown = false;
+  for(let i=0;i<60;i++){
+    const k = fmtDate(addDays(new Date(), i));
+    const info = sch[k];
+    if(!info) continue;
+    if(info.type === 'cooldown' || info.type === 'future-cooldown'){
+      hasCooldown = true;
+    }
+    if(info.cooldownBreakdown && info.cooldownBreakdown.length){
+      info.cooldownBreakdown.forEach(b => {
+        all.push({ name: b.name, days: b.days });
+      });
+    }
+  }
+  if(!hasCooldown) return { hasCooldown:false, items:[] };
+  const merged = {};
+  all.forEach(it => { merged[it.name] = (merged[it.name]||0) + it.days; });
+  const items = Object.entries(merged).map(([name, days]) => ({ name, days }));
+  return { hasCooldown:true, items };
+}
+function renderCooldownSourcesCard(){
+  const { hasCooldown, items } = getCooldownSourcesSummary();
+  if(!hasCooldown){
+    return `
+    <div class="card">
+      <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">当前状态</span></div>
+      <div style="text-align:center;padding:10px 0;color:var(--dim);font-size:12.5px;">无</div>
+    </div>`;
+  }
+  const rowsHtml = items.length
+    ? items.map(it => `<div class="cd-row"><span>${esc(it.name)}</span><span>+${it.days}天</span></div>`).join('')
+    : '<div class="cd-row"><span>冷静期自动过渡</span><span>—</span></div>';
+  return `
+  <div class="card">
+    <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">触发原因</span></div>
+    <div class="cool-detail" style="margin-top:0">
+      ${rowsHtml}
+    </div>
+    <div class="hint" style="margin-top:8px;">这些是导致你进入冷静期的原因，正常度过后冷静期会自动消失。</div>
+  </div>`;
+}
+    function renderHomeCalendarCard(){
   if(!calCursor){ const d = parseD(todayStr()); calCursor = { y:d.getFullYear(), m:d.getMonth() }; }
   const { y, m } = calCursor;
   const first = new Date(y, m, 1);
@@ -1701,6 +1752,7 @@ function viewHome(){
   </div>
 
   ${renderHomeCalendarCard()}
+  ${renderCooldownSourcesCard()}
 
   <div class="hero">
     <div class="hero-top"><span class="hero-label">小周期进度</span><span class="pill">第 ${progress}/8 天</span></div>
