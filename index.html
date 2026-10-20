@@ -477,7 +477,7 @@ let scrollPos = 0;
 
 function defaultState(){
   return {
-        version: 21, enabled: false, activated: false,
+        version: 22, enabled: false, activated: false,
     settings: {
       startDate: '',
       startTimestamp: 0,
@@ -531,7 +531,7 @@ function defaultState(){
     restartStreak: { current:0, max:0, lastSuccessDate:'', breakReason:'' },
        rewardCards: [],
     violations: [],
-    points: 10,
+        points: 0,
     pointsLedger: [],
     weeklyPointsCap: 10,
     weeklyPoints: { weekStart:'', earned:0 }
@@ -3193,7 +3193,6 @@ function openMealFoodPicker(couponId){
    卡片碎片（3 个碎片合成 1 张卡）
    ============================================================ */
 const SHARD_KINDS = [
-  { id:'clean',   name:'打扫卡碎片', card:'打扫卡',   cost:1 },
   { id:'protect', name:'保护卡碎片', card:'保护卡',   cost:2 },
   { id:'makeup',  name:'补签卡碎片', card:'补签卡',   cost:2 }
 ];
@@ -3201,9 +3200,9 @@ const SHARD_NEED = 3;
 const SHARD_WEEK_LIMIT = 3;
 const SHARD_VALID_DAYS = 60;
 function ensureShards(){
-  if(!state.shards) state.shards = { clean:0, protect:0, makeup:0 };
-  if(!state.shardDates) state.shardDates = { clean:[], protect:[], makeup:[] };
-  const k = ['clean','protect','makeup'];
+  if(!state.shards) state.shards = { protect:0, makeup:0 };
+  if(!state.shardDates) state.shardDates = { protect:[], makeup:[] };
+  const k = ['protect','makeup'];
   for(let i = 0; k.length > i; i++){
     const kk = k[i];
     if(state.shards[kk] === undefined) state.shards[kk] = 0;
@@ -3215,8 +3214,8 @@ function ensureShards(){
 }
 function expireShards(){
   ensureShards();
-  const today = getDayLifeDay();
-  const k = ['clean','protect','makeup'];
+    const today = getDayLifeDay();
+  const k = ['protect','makeup'];
   let lost = 0;
   for(let i = 0; k.length > i; i++){
     const kk = k[i];
@@ -3259,10 +3258,12 @@ function buyShard(kind){
   pushUndo('兑换' + def.name);
   state.points = (state.points || 0) - def.cost;
   state.shards[kind] += 1;
-  if(!state.shardDates) state.shardDates = { clean:[], protect:[], makeup:[] };
+  if(!state.shardDates) state.shardDates = { protect:[], makeup:[] };
   state.shardDates[kind].push(getDayLifeDay());
   state.shardWeek.used += 1;
   logAudit('shard', '兑换 ' + def.name + '（-' + def.cost + ' 分）');
+  if(!state.pointsLedger) state.pointsLedger = [];
+  state.pointsLedger.unshift({ id: nid('pt_'), date: getDayLifeDay(), time: nowTimeStr(), amount: -def.cost, source: 'shard', note: '兑换 ' + def.name, ts: Date.now() });
   saveState(); render();
   toast('获得 1 个' + def.name + '（' + state.shards[kind] + '/' + SHARD_NEED + '）');
   return true;
@@ -3308,6 +3309,9 @@ function buyFuncCard(id){
   state.cards = state.cards || {};
   state.cards[id] = (state.cards[id] || 0) + 1;
   state.funcBuy.counts[id] = (state.funcBuy.counts[id] || 0) + 1;
+  logAudit('points', '兑换 ' + def.name + '（-' + def.cost + ' 分）');
+  if(!state.pointsLedger) state.pointsLedger = [];
+  state.pointsLedger.unshift({ id: nid('pt_'), date: getDayLifeDay(), time: nowTimeStr(), amount: -def.cost, source: 'func-card', note: '兑换 ' + def.name, ts: Date.now() });
   saveState(); render();
   toast('已兑换 ' + def.name + '，库存 +1');
   return true;
@@ -3398,8 +3402,10 @@ function exchangeMealCoupon(typeId){
   const def = r.def;
   const today = getDayLifeDay();
   pushUndo('兑换' + def.name);
-  state.points = (state.points || 0) - def.cost;
+    state.points = (state.points || 0) - def.cost;
   logAudit('coupon', '兑换 ' + def.name + '（-' + def.cost + ' 分）');
+  if(!state.pointsLedger) state.pointsLedger = [];
+  state.pointsLedger.unshift({ id: nid('pt_'), date: getDayLifeDay(), time: nowTimeStr(), amount: -def.cost, source: 'coupon', note: '兑换 ' + def.name, ts: Date.now() });
   state.coupons = state.coupons || [];
   state.coupons.push({
     id: nid('cp_'), typeId: def.id, name: def.name, cap: def.cap,
@@ -3573,9 +3579,23 @@ function viewMe(){
   const ws = getWeekStart();
   const wEarned = (state.weeklyPoints && state.weeklyPoints.weekStart === ws) ? state.weeklyPoints.earned : 0;
   const wCap = state.weeklyPointsCap || 10;
-  const ledger = (state.pointsLedger || []).slice(0, 10);
+    const ledger = (state.pointsLedger || []).slice(0, 15);
+  const pointSourceMap = {
+    'resist': '意志力抵抗', 'restart': '重新启动', 'full-green': '全绿日结',
+    'green-streak-7': '连续全绿7天', 'green-streak-14': '连续全绿14天', 'green-streak-30': '连续全绿30天',
+    'tier-node': '节点奖励', 'milestone': '累计里程碑', 'quiet-night': '无宵夜',
+    'healthy-dinner': '健康晚餐', 'jingji-release': '养精蓄锐释放', 'expire': '超期过期扣除',
+    'legacy-card': '旧卡折算', 'shard': '兑换碎片', 'func-card': '兑换功能卡',
+    'coupon': '兑换约饭券', 'other': '其他'
+  };
   const ledgerHtml = ledger.length
-    ? ledger.map(it => `<div class="rec"><span class="rec-dot" style="background:#4ade80"></span><div class="rec-mid"><div class="rec-name">${esc(it.source)}</div><div class="rec-meta"><span>${it.date} ${it.time}</span>${it.note ? '<span>· ' + esc(it.note) + '</span>' : ''}</div></div><span class="rec-amt">+${it.amount}</span></div>`).join('')
+    ? ledger.map(it => {
+        const isPositive = it.amount > 0;
+        const amtColor = isPositive ? '#86efac' : '#fca5a5';
+        const amtStr = isPositive ? '+' + it.amount : String(it.amount);
+        const srcName = pointSourceMap[it.source] || it.source;
+        return `<div class="rec"><span class="rec-dot" style="background:${isPositive?'#4ade80':'#f87171'}"></span><div class="rec-mid"><div class="rec-name">${esc(srcName)}</div><div class="rec-meta"><span>${it.date} ${it.time}</span>${it.note ? '<span>· ' + esc(it.note) + '</span>' : ''}</div></div><span class="rec-amt" style="color:${amtColor}">${amtStr}</span></div>`;
+      }).join('')
     : '<div class="hint">还没有积分记录</div>';
   return `
   <div class="card"><div class="card-t"><h3>🧾 审计日志</h3><span class="sub">最近 ${(state.auditLog || []).length} 条</span></div>
@@ -4817,8 +4837,13 @@ function migrate(){
     }
   });
 
-  // 4. 版本号升 21
-  state.version = 21;
+   // 4. 版本号升 22，并强制清空历史积分（今日起从0开始）
+  if(state.version < 22) {
+    state.points = 0;
+    state.pointsLedger = [];
+    state.carryPoints = 0;
+  }
+  state.version = 22;
 }
 
 /* ============================================================
