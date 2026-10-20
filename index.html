@@ -108,6 +108,7 @@ body.cold .task-btn,body.rest .task-btn,body.bd-celebration .task-btn{color:#fff
 .cal-day.reward{background:linear-gradient(135deg,rgba(251,191,36,.35),rgba(251,191,36,.12));border:1px solid rgba(251,191,36,.7)}
 .cal-day.cool{background:linear-gradient(135deg,rgba(165,216,243,.35),rgba(219,234,254,.18));border:1px solid rgba(165,216,243,.7)}
 .cal-day.cool .cal-num{color:#a5d8f3;font-weight:700}
+.cal-day.cool-proj{opacity:.45;border-style:dashed}
 .cal-day.birthday{background:linear-gradient(135deg,rgba(255,80,80,.4),rgba(255,180,60,.28));border:1px solid rgba(255,215,0,.8)}
 .cal-day.rest{background:linear-gradient(135deg,rgba(196,181,253,.4),rgba(167,139,250,.2));border:1px solid rgba(196,181,253,.8)}
 .cal-day.rest-candidate{background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(96,165,250,.1));border:1px dashed rgba(167,139,250,.7)}
@@ -367,6 +368,22 @@ body.shake{animation:shake .5s}
 <div id="layer"></div>
 <div class="toast" id="toast"></div>
 <script>
+/* 启动错误可视提示：任何异常都会在页面顶部显示红条，而不是白屏 */
+window.onerror = function(m, s, l, c, e){
+  try{
+    var d = document.getElementById('bootErrorBar');
+    if(!d){
+      d = document.createElement('div');
+      d.id = 'bootErrorBar';
+      d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#7f1d1d;color:#fff;font:12px/1.6 monospace;padding:10px 12px;white-space:pre-wrap;word-break:break-all;';
+      document.body.appendChild(d);
+    }
+    d.textContent = '启动错误：' + m + '\n行 ' + l + ' 列 ' + c;
+  }catch(_){}
+};
+window.addEventListener('unhandledrejection', function(ev){
+  try{ window.onerror('Promise: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason), '', 0, 0); }catch(_){}
+});
 /* ============================================================
    工具函数
    ============================================================ */
@@ -379,11 +396,13 @@ const todayStr = () => fmtDate(new Date());
 const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
 const diffDays = (a,b) => Math.round((b-a)/86400000);
-const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s==null?'':s).replace(/[&\u003c\u003e"']/g, c => ({'&':'&amp;','\u003c':'&lt;','\u003e':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nid = p => p + Math.random().toString(36).slice(2,8);
 const timeToMin = t => { if(!t) return -1; const [h,m] = t.split(':').map(Number); return h*60+m; };
 const nowTimeStr = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 const nowMin = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
+const getSleepLifeDay = () => { const m = nowMin(); return 5*60 > m ? fmtDate(addDays(new Date(), -1)) : todayStr(); };
+const getDayLifeDay = () => { const m = nowMin(); return 4*60 > m ? fmtDate(addDays(new Date(), -1)) : todayStr(); };
 
 /* ============================================================
    常量
@@ -412,19 +431,19 @@ const TIERS_RESTART = [
   {count:3, type:'praise-restart', icon:'🌟', label:'重启成功奖励', desc:'特效+夸奖'}
 ];
 
-function inSleepWindow(){ const m = nowMin(); return m >= SLEEP_WINDOW.start || m < SLEEP_WINDOW.end; }
+function inSleepWindow(){ const m = nowMin(); return m >= SLEEP_WINDOW.start || SLEEP_WINDOW.end > m; }
 function inWakeWindow(){
   const m = nowMin();
   let type = 'normal';
   try {
     const sch = computeSchedule();
-    const info = sch[todayStr()] || {};
+    const info = sch[getDayLifeDay()] || {};
     if(info.isRest) type = 'rest';
     else if(info.isReward) type = 'reward';
   } catch(e){}
   if(type === 'rest') return true;
-  if(type === 'reward') return m >= 4*60 && m < 9*60;
-  return m >= 4*60 && m < 7*60 + 15;
+  if(type === 'reward') return m >= 4*60 && 9*60 > m;
+  return m >= 4*60 && 7*60 + 15 > m;
 }
 
 /* ============================================================
@@ -444,17 +463,21 @@ let syncStatusType = 'idle', syncStatusText = '正在连接云端…';
 /* ============================================================
    全局状态
    ============================================================ */
-const LS_STATE = 'garden_v20_official';
+const LS_STATE = 'garden_v21_official';
+const OLD_KEY = 'garden_v20_official';
 let state = null;
 let undoStack = [];
 let activeTab = 'home';
 let willTab = 'resist';
 let calCursor = null;
+let moneyCat = 'c_normal';
+let moneyShowTags = false;
+let showManage = false;
 let scrollPos = 0;
 
 function defaultState(){
   return {
-    version: 20, enabled: false, activated: false,
+        version: 21, enabled: false, activated: false,
     settings: {
       startDate: '',
       startTimestamp: 0,
@@ -506,8 +529,12 @@ function defaultState(){
     actions: [],
     resistStreak:  { current:0, max:0, lastSuccessDate:'', breakReason:'' },
     restartStreak: { current:0, max:0, lastSuccessDate:'', breakReason:'' },
-    rewardCards: [],
-    violations: []
+       rewardCards: [],
+    violations: [],
+    points: 10,
+    pointsLedger: [],
+    weeklyPointsCap: 10,
+    weeklyPoints: { weekStart:'', earned:0 }
   };
 }
 
@@ -517,7 +544,7 @@ function defaultState(){
 function saveState(silent){
   if(!state) return;
   state.updatedAt = new Date().toISOString();
-  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); }
+  try { localStorage.setItem(LS_STATE, JSON.stringify(state)); localStorage.setItem(OLD_KEY, JSON.stringify(state)); }
   catch(e){ if(!silent) toast('本地存储失败'); }
   if(!booted || suppressSync) return;
   if(!state.enabled) return;
@@ -550,6 +577,139 @@ function isMoneyOk(d){ return !getDayExpenses(d).some(e => getCat(e.catId).isJun
 function isDietOk(d){ return !getDayFoods(d).some(e => getCat(e.catId).isJunk); }
 
 /* ============================================================
+   积分系统
+   ============================================================ */
+function logAudit(type, text){
+  if(!state.auditLog) state.auditLog = [];
+  state.auditLog.unshift({ id: nid('lg_'), ts: Date.now(), date: getDayLifeDay(), time: nowTimeStr(), type: type, text: text });
+  if(state.auditLog.length > 500) state.auditLog.length = 500;
+}
+function checkWeekRollover(){
+  const ws = getWeekStart();
+  if(!state.weeklyPoints) state.weeklyPoints = { weekStart: ws, earned: 0 };
+  if(state.weeklyPoints.weekStart === ws) return;
+  const carry = state.carryPoints || 0;
+  state.weeklyPoints = { weekStart: ws, earned: 0 };
+  if(carry > 0){
+    state.points = (state.points || 0) + carry;
+    state.carryPoints = 0;
+    logAudit('points', '上周超出上限的 ' + carry + ' 分，本周已入账');
+  }
+}
+function expireOldPoints(){
+  if(!state.pointsLedger) state.pointsLedger = [];
+  const today = getDayLifeDay();
+  let lost = 0;
+  for(let i = state.pointsLedger.length - 1; i >= 0; i--){
+    const it = state.pointsLedger[i];
+    if(it.source === 'expire') continue;
+    if(it._expired) continue;
+    const gap = Math.abs(diffDays(parseD(it.date), parseD(today)));
+    if(gap > 90){
+      const d = Math.min(it.amount || 0, state.points || 0);
+      if(d > 0){
+        state.points -= d;
+        lost += d;
+      }
+      it._expired = true;
+    }
+  }
+  if(lost > 0){
+    state.pointsLedger.unshift({ id: nid('pt_'), date: today, time: nowTimeStr(), amount: -lost, source: 'expire', note: '超过 90 天自动过期', ts: Date.now() });
+    logAudit('points', '过期扣除 ' + lost + ' 分（超过 90 天）');
+  }
+}
+function getPointsExpireHint(){
+  if(!state.pointsLedger) return '';
+  const today = getDayLifeDay();
+  let earliest = '', amount = 0;
+  for(let i = 0; state.pointsLedger.length > i; i++){
+    const it = state.pointsLedger[i];
+    if(it.source === 'expire' || it._expired) continue;
+    if(0 >= (it.amount || 0)) continue;
+    const gap = Math.abs(diffDays(parseD(it.date), parseD(today)));
+    const left = 90 - gap;
+    const expDate = fmtDate(addDays(parseD(it.date), 90));
+    if(!earliest || earliest > expDate){ earliest = expDate; amount = it.amount; }
+    if(7 >= left && 0 > left) break;
+  }
+  if(!earliest) return '';
+  const gap = Math.abs(diffDays(parseD(today), parseD(earliest)));
+  if(gap > 7) return '最早的一笔（' + amount + ' 分）将于 ' + earliest + ' 过期';
+  return '⚠ 有积分将在 ' + gap + ' 天内过期（最近：' + earliest + '，' + amount + ' 分）';
+}
+function getWeekStart(){
+  const now = new Date();
+  const day = now.getDay();
+  const monday = addDays(now, -(day === 0 ? 6 : day-1));
+  return fmtDate(monday);
+}
+function addPoints(amount, source, note, dateStr){
+  if(!state || !state.enabled) return { ok:false, reason:'未启用' };
+  if(!amount || 0 >= amount) return { ok:false, reason:'金额无效' };
+  const ws = getWeekStart();
+  if(!state.weeklyPoints) state.weeklyPoints = { weekStart: ws, earned: 0 };
+  if(state.weeklyPoints.weekStart !== ws){
+    state.weeklyPoints = { weekStart: ws, earned: 0 };
+  }
+  if(!state.pointsLedger) state.pointsLedger = [];
+  const cap = state.weeklyPointsCap || 10;
+  const remain = cap - state.weeklyPoints.earned;
+  if(0 >= remain){
+    state.carryPoints = (state.carryPoints || 0) + amount;
+    logAudit('points', '+' + amount + ' 超出本周上限，顺延到下周（' + source + '）');
+    saveState();
+    return { ok:false, reason:'本周积分已达上限，已顺延到下周' };
+  }
+  const actual = amount > remain ? remain : amount;
+  const overflow = amount - actual;
+  if(overflow > 0){
+    state.carryPoints = (state.carryPoints || 0) + overflow;
+  }
+  state.points = (state.points || 0) + actual;
+  state.weeklyPoints.earned += actual;
+  state.pointsLedger.unshift({
+    id: nid('pt_'),
+    date: dateStr || getDayLifeDay(),
+    time: nowTimeStr(),
+    amount: actual,
+    source: source || 'other',
+    note: note || '',
+    ts: Date.now()
+  });
+  if(state.pointsLedger.length > 200){ state.pointsLedger.length = 200; }
+  logAudit('points', '+' + actual + ' 分（' + (source || 'other') + '）' + (overflow > 0 ? '，超出 ' + overflow + ' 分顺延下周' : ''));
+  saveState();
+  return { ok:true, amount: actual, capped: amount > actual };
+}
+function isDayFullGreen(dateKey, sch){
+  const rec = state.records[dateKey];
+  if(!rec) return false;
+  const sched = sch || computeSchedule();
+  const info = sched[dateKey] || {};
+  const sleepOk = !!(rec.sleep && rec.sleep.success);
+  const studyOk = !!(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward'));
+  const moneyOk = getDayExpenses(dateKey).length > 0 && isMoneyOk(dateKey);
+  const dietOk = isDietOk(dateKey);
+  const jjOk = (rec.jingji && rec.jingji.checked && rec.jingji.ok === true) || info.isJJRelease === true;
+  return sleepOk && studyOk && moneyOk && dietOk && jjOk;
+}
+function checkGreenStreak(dateKey){
+  const sch = computeSchedule();
+  let streak = 0;
+  let d = parseD(dateKey);
+  for(let i=0; 60 > i; i++){
+    const k = fmtDate(d);
+    if(!isDayFullGreen(k, sch)) break;
+    streak++;
+    d = addDays(d, -1);
+  }
+  if(streak === 7) addPoints(5, 'green-streak-7', '连续7天全绿', dateKey);
+  else if(streak === 14) addPoints(5, 'green-streak-14', '连续14天全绿', dateKey);
+  else if(streak === 30) addPoints(10, 'green-streak-30', '连续30天全绿', dateKey);
+}
+
+/* ============================================================
    云同步
    ============================================================ */
 function setSyncStatus(type, msg){ syncStatusType = type; syncStatusText = msg; }
@@ -562,7 +722,7 @@ function cloudPush(silent){
   if(!silent) setSyncStatus('warn', '正在上传…');
   const payload = {
     user_id: syncUserId,
-    items: { __type:'garden', version: state.version || 20, state },
+        items: { __type:'garden', version: state.version || 21, state },
     remedy_pool: [], sim_date: todayStr(),
     updated_at: new Date().toISOString()
   };
@@ -582,6 +742,90 @@ function cloudPush(silent){
     return { ok: false, error: e };
   });
 }
+
+/* ============================================================
+   云同步：逐字段合并（避免多设备互相覆盖）
+   ============================================================ */
+function unionById(localArr, remoteArr, preferStatus){
+  const out = [];
+  const seen = {};
+  const push = it => {
+    if(!it || !it.id) return;
+    if(seen[it.id]) return;
+    seen[it.id] = true;
+    out.push(it);
+  };
+  (localArr || []).forEach(push);
+  (remoteArr || []).forEach(it => {
+    if(!it || !it.id) return;
+    if(seen[it.id]){
+      if(preferStatus && it.status === preferStatus){
+        for(let i = 0; out.length > i; i++){
+          if(out[i].id === it.id){ out[i].status = it.status; if(it.usedAt) out[i].usedAt = it.usedAt; break; }
+        }
+      }
+      return;
+    }
+    push(it);
+  });
+  return out;
+}
+function mergeRecords(localRec, remoteRec){
+  const out = {};
+  const keys = {};
+  Object.keys(localRec || {}).forEach(k => { keys[k] = true; });
+  Object.keys(remoteRec || {}).forEach(k => { keys[k] = true; });
+  Object.keys(keys).forEach(k => {
+    const l = (localRec || {})[k];
+    const r = (remoteRec || {})[k];
+    if(!l){ out[k] = r; return; }
+    if(!r){ out[k] = l; return; }
+    const m = Object.assign({}, r);
+    Object.keys(l).forEach(f => { m[f] = l[f]; });
+    out[k] = m;
+  });
+  return out;
+}
+function maxNum(a, b){ return (Number(a) || 0) >= (Number(b) || 0) ? (Number(a) || 0) : (Number(b) || 0); }
+function mergeRemoteState(remote){
+  if(!remote) return false;
+  state.records = mergeRecords(state.records, remote.records);
+  state.expenses = unionById(state.expenses, remote.expenses);
+  state.actions = unionById(state.actions, remote.actions);
+  state.violations = unionById(state.violations, remote.violations);
+  state.pointsLedger = unionById(state.pointsLedger, remote.pointsLedger).slice(0, 200);
+  state.auditLog = unionById(state.auditLog, remote.auditLog)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 500);
+  state.coupons = unionById(state.coupons, remote.coupons, 'used');
+  state.rewardCards = unionById(state.rewardCards, remote.rewardCards);
+  state.tierPrizes = unionById(state.tierPrizes, remote.tierPrizes);
+  state.editLog = unionById(state.editLog, remote.editLog);
+  state.points = maxNum(state.points, remote.points);
+  state.carryPoints = maxNum(state.carryPoints, remote.carryPoints);
+  state.jjBank = maxNum(state.jjBank, remote.jjBank);
+  if(state.cards && remote.cards){
+    ['protect','sick','makeup','clean','birthday','reset'].forEach(k => {
+      state.cards[k] = maxNum(state.cards[k], remote.cards[k]);
+    });
+    const lu = Object.assign({}, remote.cards._lastUse || {}, state.cards._lastUse || {});
+    state.cards._lastUse = lu;
+  }
+  if(state.shards && remote.shards){
+    ['clean','protect','makeup'].forEach(k => { state.shards[k] = maxNum(state.shards[k], remote.shards[k]); });
+  }
+  if(state.stats && remote.stats){
+    ['totalGreenDays','totalCooldowns','longestStreak','treesGrown'].forEach(k => {
+      state.stats[k] = maxNum(state.stats[k], remote.stats[k]);
+    });
+  }
+  if(state.jj && remote.jj){
+    state.jj.completed = maxNum(state.jj.completed, remote.jj.completed);
+  }
+  state.restResolved = Object.assign({}, remote.restResolved || {}, state.restResolved || {});
+  state.restReschedule = Object.assign({}, remote.restReschedule || {}, state.restReschedule || {});
+  return true;
+}
+
 function cloudPull(silent){
   if(!silent) setSyncStatus('warn', '正在下载…');
   return fetch(SUPABASE_URL + '/rest/v1/user_data?user_id=eq.' + encodeURIComponent(syncUserId), {
@@ -606,14 +850,19 @@ function cloudPull(silent){
     const localEmpty = !state || !state.enabled;
     if(localEmpty || cloudTime > lastLocalChange + 1500){
       suppressSync = true;
-      state = payload.state;
+      if(localEmpty){
+        state = payload.state;
+      } else {
+        try { mergeRemoteState(payload.state); }
+        catch(e){ state = payload.state; }
+      }
       try { migrate(); } catch(e){}
       try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch(e){}
       lastLocalChange = cloudTime;
       try { localStorage.setItem(LAST_CHANGE_KEY, String(lastLocalChange)); } catch(e){}
       suppressSync = false;
       render(false);
-      setSyncStatus('ok', '已从云端恢复 · ' + new Date(cloudTime).toLocaleString('zh-CN'));
+      setSyncStatus('ok', '已合并云端数据 · ' + new Date(cloudTime).toLocaleString('zh-CN'));
       return { pulled:true };
     }
     if(lastLocalChange > cloudTime + 1500){ cloudPush(true); setSyncStatus('ok', '本机较新，已上传'); }
@@ -631,7 +880,7 @@ function cloudPull(silent){
 function checkStreakTimeout(){
   ['resistStreak','restartStreak'].forEach(k => {
     const s = state[k];
-    if(s.current <= 0 || !s.lastSuccessDate) return;
+    if(0 >= s.current || !s.lastSuccessDate) return;
     const gap = diffDays(parseD(s.lastSuccessDate), new Date());
     if(gap > GAP_TOLERANCE + 1){
       s.current = 0;
@@ -639,9 +888,45 @@ function checkStreakTimeout(){
     }
   });
 }
+const MILESTONES = [
+  { n:10, pts:2, label:'累计 10 次' },
+  { n:25, pts:3, label:'累计 25 次' },
+  { n:50, pts:5, label:'累计 50 次' }
+];
+function jjBankPoints(n){
+  if(1 === n) return 2;
+  if(2 === n) return 5;
+  if(3 === n) return 10;
+  if(4 === n) return 12;
+  return n >= 5 ? n * 4 : 0;
+}
+function releaseJjBank(){
+  const n = state.jjBank || 0;
+  if(0 >= n){ toast('还没有可释放的周期'); return false; }
+  const pts = jjBankPoints(n);
+  const r = addPoints(pts, 'jingji-release', '释放 ' + n + ' 个养精周期', getDayLifeDay());
+  state.jjBank = 0;
+  logAudit('points', '释放 ' + n + ' 个养精周期（+' + (r.amount || 0) + ' 分）');
+  saveState(); render();
+  toast('已释放 ' + n + ' 个周期 → +' + (r.amount || 0) + ' 分');
+  return true;
+}
+function checkActionMilestone(type){
+  if(!state._msAwarded) state._msAwarded = {};
+  const total = (state.actions || []).filter(a => a.type === type && a.result === 'success' && (a.intensity || 0) >= INTENSITY_MIN).length;
+  for(let i = 0; MILESTONES.length > i; i++){
+    const m = MILESTONES[i];
+    const key = type + '_' + m.n;
+    if(total >= m.n && !state._msAwarded[key]){
+      state._msAwarded[key] = true;
+      addPoints(m.pts, 'milestone', (type === 'resist' ? '抵抗' : '重启') + m.label, getDayLifeDay());
+      logAudit('points', (type === 'resist' ? '抵抗' : '重启') + m.label + '成就（+' + m.pts + ' 分）');
+    }
+  }
+}
 function addAction(info){
   const rec = {
-    id: nid('a_'), date: todayStr(), time: nowTimeStr(),
+    id: nid('a_'), date: getDayLifeDay(), time: nowTimeStr(),
     type: info.type, result: info.result,
     intensity: Number(info.intensity) || 0,
     target: (info.target || '').trim(),
@@ -652,6 +937,7 @@ function addAction(info){
   };
   state.actions.unshift(rec);
   const countsForStreak = rec.intensity >= INTENSITY_MIN;
+  try { checkActionMilestone(info.type); } catch(e){}
   const sKey = info.type === 'resist' ? 'resistStreak' : 'restartStreak';
   const s = state[sKey];
   if(info.result === 'success'){
@@ -660,11 +946,12 @@ function addAction(info){
         const gap = diffDays(parseD(s.lastSuccessDate), parseD(rec.date));
         if(gap > GAP_TOLERANCE + 1) s.current = 0;
       }
-      s.current += 1;
+           s.current += 1;
       s.lastSuccessDate = rec.date;
       if(s.current > s.max) s.max = s.current;
-      const tier = tryCreateReward(info.type, s.current);
+      const tier = recordTierPrize(info.type, s.current);
       if(tier) rec._tierReached = tier;
+      try { addPoints(1, info.type === 'resist' ? 'resist' : 'restart', info.target || '', rec.date); } catch(e){}
     } else {
       rec._excludedFromStreak = true;
     }
@@ -676,6 +963,42 @@ function addAction(info){
   }
   saveState();
   return rec;
+}
+function recordTierPrize(type, count){
+  const tiers = type === 'resist' ? TIERS_RESIST : TIERS_RESTART;
+  const tier = tiers.find(t => t.count === count);
+  if(!tier) return null;
+  if(!state.tierPrizes) state.tierPrizes = [];
+  const exist = state.tierPrizes.find(p => p.status === 'pending' && p.type === type && p.tier === count);
+  if(exist) return null;
+  const pts = count >= 12 ? 3 : (count >= 6 ? 2 : 1);
+  state.tierPrizes.unshift({
+    id: nid('tp_'), type: type, tier: count,
+    label: tier.label, icon: tier.icon, desc: tier.desc,
+    points: pts, date: getDayLifeDay(), status: 'auto'
+  });
+  addPoints(pts, 'tier-node', (type === 'resist' ? '抵抗' : '重启') + ' ' + count + ' 次节点', getDayLifeDay());
+  logAudit('points', '节点奖励：' + tier.label + '（+' + pts + ' 分）');
+  saveState();
+  return tier;
+}
+function claimTierPrize(id){
+  const p = (state.tierPrizes || []).find(x => x.id === id);
+  if(!p || p.status !== 'pending'){ toast('该奖励已处理'); return; }
+  tryCreateReward(p.type, p.tier);
+  p.status = 'claimed';
+  p.handledAt = getDayLifeDay();
+  saveState(); render();
+  toast('已发到卡包，明天可使用');
+}
+function convertTierPrize(id){
+  const p = (state.tierPrizes || []).find(x => x.id === id);
+  if(!p || p.status !== 'pending'){ toast('该奖励已处理'); return; }
+  const r = addPoints(p.points, 'tier-node', p.label, getDayLifeDay());
+  p.status = 'points';
+  p.handledAt = getDayLifeDay();
+  saveState(); render();
+  toast(r.ok ? ('已转为 +' + r.amount + ' 积分') : ('积分未发放：' + r.reason));
 }
 function tryCreateReward(type, count){
   const tiers = type === 'resist' ? TIERS_RESIST : TIERS_RESTART;
@@ -693,34 +1016,66 @@ function tryCreateReward(type, count){
   saveState();
   return tier;
 }
+function openRewardFoodPicker(card){
+  ensureFoodLib();
+  const foods = (state.foodLib.foods || []).filter(f => f.list !== 'black');
+  if(!foods.length) return false;
+  const rows = foods.map(f => `<div class="rec"><span class="rec-dot" style="background:#4ade80"></span><div class="rec-mid"><div class="rec-name">${esc(f.name)}</div><div class="rec-meta"><span>${esc(getShopName(f.shopId) || '未指定店')}</span><span>¥${f.price}</span></div></div><button class="rec-edit" data-pick-reward="${f.id}" data-reward-card="${card.id}">就是这个</button></div>`).join('');
+  openSheet(`
+    <h3>🎁 ${esc(card.label)} · 选吃了什么</h3>
+    <div class="hint" style="margin-bottom:10px;">从食物库选，会自动记进今天的支出（券/奖励消费，不触发惩罚）。</div>
+    <div style="max-height:46vh;overflow-y:auto;">${rows}</div>
+    <div class="close-row"><button class="btn btn-g" id="rwSkip">这次不选</button></div>`, sheet => {
+    sheet.querySelector('#rwSkip').onclick = closeSheet;
+  });
+  return true;
+}
+function submitRewardFood(cardId, foodId){
+  ensureFoodLib();
+  const f = (state.foodLib.foods || []).find(x => x.id === foodId);
+  if(!f){ toast('食物不存在'); return; }
+  const card = (state.rewardCards || []).find(c => c.id === cardId);
+  state.expenses = state.expenses || [];
+  state.expenses.push({
+    id: nid('e_'), date: getDayLifeDay(),
+    name: (getShopName(f.shopId) ? getShopName(f.shopId) + ' · ' : '') + f.name,
+    price: f.price || 0, catId: f.catId || 'c_normal',
+    isCoupon: true, rewardCardId: cardId
+  });
+  logAudit('card', '奖励卡记账：' + f.name + ' ¥' + (f.price || 0));
+  saveState(); closeSheet(); render();
+  toast('已记账 ✓');
+}
 function getActiveCards(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const nowM = nowMin();
   let changed = false;
   state.rewardCards.forEach(c => {
     if(c.status==='pending' && c.displayDate===today && nowM>=CUTOFF_MIN){ c.status='expired'; c.resolvedAt=today+' '+nowTimeStr(); changed=true; }
-    if(c.status==='pending' && c.displayDate<today){ c.status='expired'; c.resolvedAt=today; changed=true; }
+    if(c.status==='pending' && today > c.displayDate){ c.status='expired'; c.resolvedAt=today; changed=true; }
   });
   if(changed) saveState();
-  return state.rewardCards.filter(c => c.status==='pending' && c.displayDate===today && nowM < CUTOFF_MIN);
+  return state.rewardCards.filter(c => c.status==='pending' && c.displayDate===today && CUTOFF_MIN > nowM);
 }
 function resolveCard(cardId, action){
   const c = state.rewardCards.find(x => x.id === cardId);
   if(!c) return;
   if(action === 'use'){
     c.status = 'used';
-    c.resolvedAt = todayStr() + ' ' + nowTimeStr();
+    c.resolvedAt = getDayLifeDay() + ' ' + nowTimeStr();
     saveState();
+    logAudit('card', '使用奖励卡：' + c.label);
+    if(openRewardFoodPicker(c)) return;
     toast('已使用 · 计划内加餐 ✓');
   } else if(action === 'decline'){
     c.status = 'declined';
-    c.resolvedAt = todayStr() + ' ' + nowTimeStr();
+    c.resolvedAt = getDayLifeDay() + ' ' + nowTimeStr();
     const s = state.resistStreak;
     s.current += 1;
     if(s.current > s.max) s.max = s.current;
-    s.lastSuccessDate = todayStr();
+    s.lastSuccessDate = getDayLifeDay();
     state.actions.unshift({
-      id: nid('a_'), date: todayStr(), time: nowTimeStr(),
+      id: nid('a_'), date: getDayLifeDay(), time: nowTimeStr(),
       type:'resist', result:'success', intensity:10,
       target: `拒绝${c.label}奖励`,
       emotions: ['坚定'], sources: ['奖励诱惑'],
@@ -753,7 +1108,7 @@ function playCheer(currentCount, tier){
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 500);
   }
-  for(let k=0;k<waveCount;k++){
+  for(let k=0;waveCount > k;k++){
     setTimeout(() => spawnFireworks(tier ? tier.type : 'normal'), k*320);
   }
 }
@@ -769,7 +1124,7 @@ function spawnFireworks(tierType){
   const colors = colorMap[tierType] || colorMap.normal;
   const cx = 25 + Math.random()*50, cy = 25 + Math.random()*40;
   const color = colors[Math.floor(Math.random()*colors.length)];
-  for(let i=0;i<18;i++){
+  for(let i=0;18 > i;i++){
     const ang = (i/18)*Math.PI*2, dist = 80 + Math.random()*70;
     const p = document.createElement('div');
     p.className = 'firework';
@@ -785,43 +1140,81 @@ function spawnFireworks(tierType){
 /* ============================================================
    判断规则
    ============================================================ */
-function judgeStudy(h, isReward){
+function judgeStudy(h, isReward, cleanActive){
   if(isReward){
-    if(h>=7) return { tier:'normal', label:'正常', msg:'奖励日 ≥7h' };
-    if(h>=6) return { tier:'cool1', label:'冷静1天', msg:'奖励日 6-7h' };
-    return { tier:'cool2', label:'冷静2天', msg:'奖励日 <6h' };
+    if(h >= 7) return { tier:'normal', label:'正常', msg:'奖励日 ≥7h', isGreen:true };
+    if(h >= 6) return { tier:'cool1', label:'冷静1天', msg:'奖励日 6-7h', isGreen:false };
+    return { tier:'cool2', label:'冷静2天', msg:'奖励日 不足6h', isGreen:false };
   }
-  if(h>=10) return { tier:'reward', label:'奖励加餐', msg:'≥10h' };
-  if(h>=9)  return { tier:'normal', label:'正常积累', msg:'9-10h' };
-  if(h>=8)  return { tier:'conservative', label:'保守打卡', msg:'8-9h，不计入' };
-  if(h>=7)  return { tier:'cool1', label:'冷静1天', msg:'7-8h' };
-  if(h>=6)  return { tier:'cool2', label:'冷静2天', msg:'6-7h' };
-  return { tier:'cool3', label:'冷静3天', msg:'<6h' };
+  const eff = h + (cleanActive ? 1 : 0);
+  if(eff >= 10) return { tier:'reward', label:'奖励档', msg:'等效 ' + eff + 'h 奖励档', isGreen:true, eff };
+  if(eff >= 9)  return { tier:'normal', label:'正常档', msg:'等效 ' + eff + 'h 正常档', isGreen:true, eff };
+  if(eff >= 8)  return { tier:'recovery', label:'恢复日', msg:'等效 ' + eff + 'h 恢复日', isGreen:false, eff };
+  if(eff >= 7)  return { tier:'cool1', label:'冷静1天', msg:'等效 ' + eff + 'h 冷静1天', isGreen:false, eff };
+  if(eff >= 6)  return { tier:'cool2', label:'冷静2天', msg:'等效 ' + eff + 'h 冷静2天', isGreen:false, eff };
+  return { tier:'cool3', label:'冷静3天', msg:'等效 ' + eff + 'h 冷静3天', isGreen:false, eff };
 }
-function judgeSleep(time, reason){
+function judgeSleep(time, reason, isMakeup){
   if(!time) return { success:false, msg:'未打卡' };
   const t = timeToMin(time);
   const d = timeToMin(state.settings.sleepDeadline || '23:30');
-  const adj = t < d - 12*60 ? t + 24*60 : t;
-  if(adj <= d) return { success:true, msg:'按时上床 ✓' };
-  if(reason === 'work') return { success:true, msg:'晚睡原因：工作/不可抗力 ✓' };
-  return { success:false, msg:'超过截止且非不可抗力' };
+  const adj = ((d - 12*60) > t) ? t + 24*60 : t;
+  if(d >= adj) return { success:true, msg:'按时上床 ✓' };
+  if(isMakeup) return { success:false, msg:'补签判定：超过23:30' };
+  const now = new Date();
+  const day = now.getDay();
+  const monday = addDays(now, -(day === 0 ? 6 : day-1));
+  const weekStart = fmtDate(monday);
+  if(!state.sleepExemptions) state.sleepExemptions = { weekStart:'', used:0 };
+  if(state.sleepExemptions.weekStart !== weekStart){
+    state.sleepExemptions.weekStart = weekStart;
+    state.sleepExemptions.used = 0;
+  }
+  if(reason === 'work' && 2 > state.sleepExemptions.used){
+    state.sleepExemptions.used++;
+    return { success:true, msg:`工作/不可抗力 ✓ (本周${state.sleepExemptions.used}/2)` };
+  }
+  return { success:false, msg:'超过23:30且无可用豁免' };
+}
+const FIT_TIERS = [
+  { max:'05:20', min:60, label:'1 小时' },
+  { max:'05:40', min:45, label:'45 分钟' },
+  { max:'06:10', min:30, label:'30 分钟' }
+];
+function fitTierOf(wakeTime){
+  if(!wakeTime) return { min:0, label:'未起床', ok:false };
+  const t = timeToMin(wakeTime);
+  for(let i = 0; FIT_TIERS.length > i; i++){
+    const tier = FIT_TIERS[i];
+    if(timeToMin(tier.max) >= t) return { min: tier.min, label: tier.label, ok: true, tier: i };
+  }
+  return { min: 0, label:'超过 6:10，今天不安排健身', ok:false };
 }
 function judgeWake(time, dayType){
   if(!time) return { fitness:false, msg:'未打卡' };
   const t = timeToMin(time);
   if(dayType === 'reward'){
-    if(t <= timeToMin('07:20')) return { fitness:true, msg:'奖励日起床达标 ✓' };
-    return { fitness:false, msg:'奖励日超时（≤7:20达标），今日不能健身' };
+    if(timeToMin('07:20') >= t) return { fitness:true, msg:'奖励日起床达标 ✓' };
+    return { fitness:false, msg:'奖励日超时，今日不能健身' };
   }
   const d = timeToMin(state.settings.wakeDeadline || '05:20');
-  if(t <= d) return { fitness:true, msg:'起床达标 ✓' };
-  return { fitness:false, msg:'超过5:20，影响健身（连续2次进冷静）' };
+  if(d >= t) return { fitness:true, msg:'起床达标 ✓' };
+    return { fitness:false, msg:'超过5:20，影响健身（连续2次进冷静）' };
 }
-
 /* ============================================================
    冷静期计算
    ============================================================ */
+function capCooldowns(list, max){
+  let total = 0;
+  for(let i = 0; list.length > i; i++) total += list[i].daysRemaining;
+  for(let i = list.length - 1; i >= 0 && total > max; i--){
+    const excess = total - max;
+    const cut = Math.min(list[i].daysRemaining, excess);
+    list[i].daysRemaining -= cut;
+    total -= cut;
+  }
+  return list.filter(cd => cd.daysRemaining > 0);
+}
 function getStudyCooldown(t){ if(t==='cool1')return 1; if(t==='cool2')return 2; if(t==='cool3')return 3; return 0; }
 function getDayCooldown(rec, dateKey){
   let total = 0;
@@ -839,18 +1232,25 @@ function getDayCooldown(rec, dateKey){
 }
 function isGreenForCooldown(rec, d, jjR){
   if(!rec) return false;
+  if(rec.makeup === true) return false;
+  if(rec.protect === true || rec.sick === true) return false;
+  const studyGreen = !!(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward'));
   return !!(rec.sleep && rec.sleep.success)
-      && !!(rec.study && (rec.study.tier==='normal' || rec.study.tier==='reward'))
+      && !!(rec.wake && rec.wake.fitness)
+      && studyGreen
       && isMoneyOk(d) && isDietOk(d)
-      && ((rec.jingji && rec.jingji.checked && rec.jingji.ok===true) || jjR===true);
+      && ((rec.jingji && rec.jingji.checked && rec.jingji.ok === true) || jjR === true);
 }
 function isGreenForCycle(rec, d, jjR){
   if(!rec) return false;
+  if(rec.makeup === true) return false;
+  if(rec.protect === true || rec.sick === true) return false;
+  const studyGreen = !!(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward'));
   return !!(rec.sleep && rec.sleep.success)
-      && !!(rec.wake && rec.wake.checked)
-      && !!(rec.study && (rec.study.tier==='normal' || rec.study.tier==='reward'))
+      && !!(rec.wake && rec.wake.fitness)
+      && studyGreen
       && isMoneyOk(d) && isDietOk(d)
-      && ((rec.jingji && rec.jingji.checked && rec.jingji.ok===true) || jjR===true);
+      && ((rec.jingji && rec.jingji.checked && rec.jingji.ok === true) || jjR === true);
 }
 function isBirthdayDate(dateKey){
   if(!state.settings.birthday) return false;
@@ -868,7 +1268,7 @@ function canUseBirthdayCard(checkDate){
   const y2 = new Date(cd.getFullYear()-1, bd.getMonth(), bd.getDate());
   const y3 = new Date(cd.getFullYear()+1, bd.getMonth(), bd.getDate());
   const diff = Math.min(Math.abs(diffDays(y1,cd)), Math.abs(diffDays(y2,cd)), Math.abs(diffDays(y3,cd)));
-  return diff <= BD_TOLERANCE;
+  return BD_TOLERANCE >= diff;
 }
 
 /* ============================================================
@@ -877,169 +1277,297 @@ function canUseBirthdayCard(checkDate){
 function computeSchedule(){
   const result = {};
   const today = todayStr();
-  const startDateStr = state.settings.startDate || today;
-  let d = parseD(startDateStr);
+  let d = parseD(state.settings.startDate || today);
   const endDate = addDays(parseD(today), 200);
-  let cooldownTotal = 0, consecutiveGreen = 0, wakeFailStreak = 0, conservativeStreak = 0;
-  let cycleDay = 0, bigCycleDay = 0, pendingRestKey = null, lastBigCycleComplete = 0;
-  let jjCurrent = 0, jjCycleLength = state.settings.jjInitial || 10;
-  const restReschedule = state.restReschedule || {};
+  let cycleDay = 0;
+  let activeCooldowns = [];
+  let pendingRestKey = null;
+  let lastBigCycleComplete = 0;
+  let wakeFailStreak = 0;
+  let recoveryStreak = 0;
+  let cleanStreak = 0;
+  let projClean = 0;
+  let jjCurrent = 0;
+  let jjCycleLength = state.settings.jjInitial || 10;
   let guard = 0;
 
-  while(d <= endDate && guard++ < 1000){
+  while(endDate >= d && guard !== 1000){
+    guard++;
     const key = fmtDate(d);
     const rec = state.records[key];
     const isFuture = key > today;
+    const isExemptDay = rec && (rec.protect === true || rec.sick === true);
+    const isMakeupDay = rec && rec.makeup === true;
     const dayInfo = {
-      key, type: 'future', cycleDay: 0, isReward: false, isMealDay: false,
-      isBirthday: false, isRest: false, isRestCandidate: false,
-      cooldownRemaining: 0, isJJRelease: false, isBigCycleComplete: false,
-      cooldownBreakdown: null, isManualRest: false
+      key, type: 'future', cycleDay: 0, cooldownRemaining: 0,
+      isReward: false, isMealDay: false, isRest: false, isRestCandidate: false,
+      isBirthday: false, isJJRelease: false, isBigCycleComplete: false,
+      cooldownBreakdown: null, isRestConfirmed: false,
+      isExempt: false, isMakeup: false
     };
+
+    if(isExemptDay){ dayInfo.isExempt = true; }
+    if(isMakeupDay){ dayInfo.isMakeup = true; }
+
     if(isBirthdayDate(key)) dayInfo.isBirthday = true;
 
+    if(rec && rec._cycleReset){
+      activeCooldowns = [];
+    }
+
+    activeCooldowns = activeCooldowns.filter(cd => cd.daysRemaining > 0);
+    activeCooldowns = activeCooldowns.filter(cd => cd.expireDate === undefined || cd.expireDate >= key);
+
+    // 休息候选日 / 休息日 / 延后处理
+    if(pendingRestKey === key){
+      const resolution = state.restResolved[key];
+      const delayedTo = state.restReschedule[key];
+      if(resolution === 'keep'){
+        dayInfo.isRest = true;
+        dayInfo.isRestConfirmed = true;
+        result[key] = dayInfo;
+        cycleDay = 0;
+        pendingRestKey = null;
+        lastBigCycleComplete = 0;
+        d.setDate(d.getDate() + 1);
+        continue;
+      }
+      if(resolution === 'delay' && delayedTo){
+        pendingRestKey = delayedTo;
+      } else {
+        dayInfo.isRestCandidate = true;
+        result[key] = dayInfo;
+        d.setDate(d.getDate() + 1);
+        continue;
+      }
+    }
+
+    // 延后休息日到达
+    let isDelayedRestDay = false;
+    for(const orig in state.restReschedule){
+      if(state.restReschedule[orig] === key && orig !== key){ isDelayedRestDay = true; break; }
+    }
+    if(isDelayedRestDay){
+      dayInfo.isRest = true;
+      dayInfo.isRestConfirmed = true;
+      result[key] = dayInfo;
+      cycleDay = 0;
+      pendingRestKey = null;
+      lastBigCycleComplete = 0;
+      d.setDate(d.getDate() + 1);
+      continue;
+    }
+
     // JJ 释放日
-    if(!isFuture && rec){
+    if(rec && !isFuture){
       if(rec.jingji && rec.jingji.checked){
         if(rec.jingji.ok === true){
           jjCurrent++;
           if(jjCurrent >= jjCycleLength){
-            dayInfo.isJJRelease = true; jjCurrent = 0;
+            dayInfo.isJJRelease = true;
+            jjCurrent = 0;
             jjCycleLength += (state.settings.jjIncrement || 5);
           }
-        } else if(rec.jingji.broken){ jjCurrent = 0; }
-      } else { jjCurrent = 0; }
+        } else {
+          jjCurrent = 0;
+        }
+      } else {
+        jjCurrent = 0;
+      }
     } else if(isFuture){
       jjCurrent++;
       if(jjCurrent >= jjCycleLength){
-        dayInfo.isJJRelease = true; jjCurrent = 0;
+        dayInfo.isJJRelease = true;
+        jjCurrent = 0;
         jjCycleLength += (state.settings.jjIncrement || 5);
       }
     }
 
-    // 待定休息日
-    if(pendingRestKey === key){
-      const resolution = state.restResolved[key];
-      const delayedTo = restReschedule[key];
-      if(resolution === 'delay' && delayedTo){
-        dayInfo.isRestCandidate = true;
-        pendingRestKey = delayedTo;
-      } else {
-        dayInfo.isRest = true;
-        dayInfo.isRestConfirmed = (resolution === 'keep');
-        result[key] = dayInfo;
-        cycleDay = 0; bigCycleDay = 0; pendingRestKey = null; lastBigCycleComplete = 0;
-        d.setDate(d.getDate() + 1); continue;
-      }
-    }
-
-    // 延后休息日
-    let isDelayedRestDay = false;
-    for(const orig in restReschedule){
-      if(restReschedule[orig] === key && orig !== key){ isDelayedRestDay = true; break; }
-    }
-    if(isDelayedRestDay){
-      dayInfo.isRest = true; dayInfo.isRestConfirmed = true;
-      result[key] = dayInfo;
-      cycleDay = 0; bigCycleDay = 0; pendingRestKey = null; lastBigCycleComplete = 0;
-      d.setDate(d.getDate() + 1); continue;
-    }
-
-    // 冷静期
-    if(cooldownTotal > 0){
+    // 冷静期处理
+    if(activeCooldowns.length > 0){
       dayInfo.type = isFuture ? 'future-cooldown' : 'cooldown';
-      dayInfo.cooldownRemaining = cooldownTotal;
-      if(rec && !isFuture){
-        const _origCD = cooldownTotal;
-        const _isGreen = _origCD >= 3 && isGreenForCooldown(rec, key, dayInfo.isJJRelease);
+      dayInfo.cooldownRemaining = activeCooldowns.reduce((sum, cd) => sum + cd.daysRemaining, 0);
 
-        if(!_isGreen){
-          // 累加新的失败
+      if(rec && !isFuture){
+        const isGreen = isGreenForCooldown(rec, key, dayInfo.isJJRelease);
+
+                if(isGreen){
+          activeCooldowns.forEach(cd => {
+            if(cd.daysTotal >= 3){
+              cd.greenStreak = (cd.greenStreak || 0) + 1;
+              if(cd.greenStreak >= 2){
+                cd.daysRemaining = Math.max(0, cd.daysRemaining - 1);
+                cd.greenStreak = 0;
+              }
+            }
+          });
+        }
+
+        // 豁免日：不产生新冷静期；补签日：正常走冷静期来源收集
+        if(!isExemptDay){
           const dayCd = getDayCooldown(rec, key);
-          if(dayCd.total > 0){ cooldownTotal += dayCd.total; dayInfo.cooldownBreakdown = dayCd.breakdown; }
+          let newBreakdown = dayCd.breakdown.slice();
+
           if(rec.wake && rec.wake.checked && !rec.wake.fitness){
             if(rec.wake.autoFail){
-              cooldownTotal += 1;
-              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
-              dayInfo.cooldownBreakdown.push({ name: rec.wake.cutoffLabel || '超过截止未打卡', days:1 });
+              newBreakdown.push({ name: rec.wake.cutoffLabel || '超过截止未打卡', days: 1 });
               wakeFailStreak = 0;
             } else if(rec.wake.isRewardLate){
               wakeFailStreak = 0;
             } else {
               wakeFailStreak++;
               if(wakeFailStreak >= 2){
-                cooldownTotal += 1;
-                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
-                dayInfo.cooldownBreakdown.push({ name:'连续2次起床超时', days:1 });
+                newBreakdown.push({ name: '连续2次起床超时', days: 1 });
                 wakeFailStreak = 0;
               }
             }
-          } else { wakeFailStreak = 0; }
-          if(rec.study && rec.study.tier === 'conservative'){
-            conservativeStreak++;
-            if(conservativeStreak >= 3){ cooldownTotal += 1; conservativeStreak = 0; }
-          } else { conservativeStreak = 0; }
+          } else {
+            wakeFailStreak = 0;
+          }
+
+          if(rec.study && (rec.study.tier === 'conservative' || rec.study.tier === 'recovery')){
+            recoveryStreak++;
+            if(recoveryStreak >= 3){
+              newBreakdown.push({ name: '连续3次恢复日', days: 1 });
+              recoveryStreak = 0;
+            }
+          } else {
+            recoveryStreak = 0;
+          }
+
+          if(newBreakdown.length){
+            dayInfo.cooldownBreakdown = newBreakdown;
+            newBreakdown.forEach(b => {
+              activeCooldowns.push({
+                id: nid('cd_'),
+                sourceDate: key,
+                reason: b.name,
+                daysTotal: b.days,
+                daysRemaining: b.days,
+                greenStreak: 0,
+                fresh: true,
+                expireDate: fmtDate(addDays(parseD(key), Math.min(7, b.days + 3)))
+              });
+            activeCooldowns = capCooldowns(activeCooldowns, 7);
+            });
+          }
         }
 
-        if(_isGreen){
-          cooldownTotal--; consecutiveGreen++;
-          if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
-        } else if(_origCD < 3){
-          // 冷静期 ≤ 2 天，每天自然流逝 1 天
-          cooldownTotal--; consecutiveGreen = 0;
-        } else {
-          // 冷静期 ≥ 3 天但不全绿：不减，只累加
-          consecutiveGreen = 0;
-        }
+                activeCooldowns.forEach(cd => {
+          if(!cd.fresh){
+            if(cd.daysTotal >= 3){
+              if(!isGreen){ cd.greenStreak = 0; }
+            } else {
+              cd.daysRemaining--;
+            }
+          }
+          cd.fresh = false;
+        });
+        activeCooldowns = activeCooldowns.filter(cd => cd.daysRemaining > 0);
 
-        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; dayInfo.type = 'green'; }
-      } else if(isFuture){
-        if(cooldownTotal >= 3){
-          cooldownTotal--; consecutiveGreen++;
-          if(consecutiveGreen >= 2 && cooldownTotal >= 3){ cooldownTotal--; consecutiveGreen = 0; }
+        if(activeCooldowns.length === 0){
+          dayInfo.type = 'green';
+          dayInfo.cooldownRemaining = 0;
         } else {
-          cooldownTotal--; consecutiveGreen = 0;
+          dayInfo.cooldownRemaining = activeCooldowns.reduce((sum, cd) => sum + cd.daysRemaining, 0);
         }
-        if(cooldownTotal <= 0){ cooldownTotal = 0; consecutiveGreen = 0; }
+                  } else if(isFuture){
+        activeCooldowns.forEach(cd => {
+          if(!cd.fresh){
+            if(cd.daysTotal >= 3){
+              /* 未来日：按“不再新增失败”预测，不直接扣，见下方 projClean */
+            } else {
+              cd.daysRemaining--;
+            }
+          }
+          cd.fresh = false;
+        });
+        /* 预测：每 3 天无新增失败，从尾部减 1 天 */
+        projClean++;
+        if(projClean >= 3){
+          for(let i = activeCooldowns.length - 1; i >= 0; i--){
+            if(activeCooldowns[i].daysTotal >= 3 && activeCooldowns[i].daysRemaining > 0){
+              activeCooldowns[i].daysRemaining--;
+              break;
+            }
+          }
+          projClean = 0;
+        }
+        activeCooldowns = activeCooldowns.filter(cd => cd.daysRemaining > 0);
+        if(activeCooldowns.length === 0){
+          dayInfo.type = 'future';
+        } else {
+          dayInfo.cooldownRemaining = activeCooldowns.reduce((sum, cd) => sum + cd.daysRemaining, 0);
+        }
       }
     } else {
       if(rec && !isFuture){
-        if(isGreenForCycle(rec, key, dayInfo.isJJRelease)){
-          cycleDay++; bigCycleDay++; dayInfo.type = 'green'; dayInfo.cycleDay = cycleDay;
+                const canAdvanceCycle = !isExemptDay && !isMakeupDay;
+        const studyCounted = !!(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward' || rec.study.tier === 'recovery' || rec.study.tier === 'conservative'));
+        const fullGreen = canAdvanceCycle && isGreenForCycle(rec, key, dayInfo.isJJRelease);
+        if(canAdvanceCycle && studyCounted){
+          cycleDay++;
+          dayInfo.cycleDay = cycleDay;
           if(cycleDay % 8 === 4) dayInfo.isMealDay = true;
           if(cycleDay % 8 === 0 && cycleDay > 0) dayInfo.isReward = true;
-        } else if(rec.birthdayCard || rec.sick || rec.protect){
-          dayInfo.type = 'partial';
+        }
+        if(fullGreen){
+          dayInfo.type = 'green';
         } else {
           dayInfo.type = 'partial';
-          const dayCd2 = getDayCooldown(rec, key);
-          if(dayCd2.total > 0){ cooldownTotal += dayCd2.total; dayInfo.cooldownBreakdown = dayCd2.breakdown; }
-          if(rec.wake && rec.wake.checked && !rec.wake.fitness){
-            if(rec.wake.autoFail){
-              cooldownTotal += 1;
-              if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
-              dayInfo.cooldownBreakdown.push({ name: rec.wake.cutoffLabel || '超过截止未打卡', days:1 });
-              wakeFailStreak = 0;
-            } else if(rec.wake.isRewardLate){
-              wakeFailStreak = 0;
-            } else {
-              wakeFailStreak++;
-              if(wakeFailStreak >= 2){
-                cooldownTotal += 1;
-                if(!dayInfo.cooldownBreakdown) dayInfo.cooldownBreakdown = [];
-                dayInfo.cooldownBreakdown.push({ name:'连续2次起床超时', days:1 });
+          if(!isExemptDay){
+            const dayCd = getDayCooldown(rec, key);
+            let newBreakdown = dayCd.breakdown.slice();
+
+            if(rec.wake && rec.wake.checked && !rec.wake.fitness){
+              if(rec.wake.autoFail){
+                newBreakdown.push({ name: rec.wake.cutoffLabel || '超过截止未打卡', days: 1 });
                 wakeFailStreak = 0;
+              } else if(rec.wake.isRewardLate){
+                wakeFailStreak = 0;
+              } else {
+                wakeFailStreak++;
+                if(wakeFailStreak >= 2){
+                  newBreakdown.push({ name: '连续2次起床超时', days: 1 });
+                  wakeFailStreak = 0;
+                }
               }
+            } else {
+              wakeFailStreak = 0;
             }
-          } else { wakeFailStreak = 0; }
-          if(rec.study && rec.study.tier === 'conservative'){
-            conservativeStreak++;
-            if(conservativeStreak >= 3){ cooldownTotal += 1; conservativeStreak = 0; }
-          } else { conservativeStreak = 0; }
+
+            if(rec.study && (rec.study.tier === 'conservative' || rec.study.tier === 'recovery')){
+              recoveryStreak++;
+              if(recoveryStreak >= 3){
+                newBreakdown.push({ name: '连续3次恢复日', days: 1 });
+                recoveryStreak = 0;
+              }
+            } else {
+              recoveryStreak = 0;
+            }
+
+            if(newBreakdown.length){
+              dayInfo.cooldownBreakdown = newBreakdown;
+              newBreakdown.forEach(b => {
+                activeCooldowns.push({
+                  id: nid('cd_'),
+                  sourceDate: key,
+                  reason: b.name,
+                  daysTotal: b.days,
+                  daysRemaining: b.days,
+                  greenStreak: 0,
+                  fresh: true,
+                  expireDate: fmtDate(addDays(parseD(key), Math.min(7, b.days + 3)))
+                });
+            activeCooldowns = capCooldowns(activeCooldowns, 7);
+              });
+            }
+          }
         }
       } else if(isFuture){
-        cycleDay++; bigCycleDay++;
-        dayInfo.type = 'future'; dayInfo.cycleDay = cycleDay;
+        cycleDay++;
+        dayInfo.type = 'future';
+        dayInfo.cycleDay = cycleDay;
         if(cycleDay % 8 === 4) dayInfo.isMealDay = true;
         if(cycleDay % 8 === 0 && cycleDay > 0) dayInfo.isReward = true;
       }
@@ -1050,13 +1578,58 @@ function computeSchedule(){
       lastBigCycleComplete = cycleDay;
       dayInfo.isBigCycleComplete = true;
     }
+
+    /* 连续 3 天无新增失败 → 从尾部减 1 天 */
+    let didReduce = false;
+    if(rec && !isFuture && !isExemptDay && !isMakeupDay){
+      let hadNew = false;
+      for(let i = 0; activeCooldowns.length > i; i++){
+        if(activeCooldowns[i].sourceDate === key) hadNew = true;
+      }
+      if(hadNew){
+        cleanStreak = 0;
+      } else {
+        cleanStreak++;
+        if(cleanStreak >= 3){
+          for(let i = activeCooldowns.length - 1; i >= 0; i--){
+            if(activeCooldowns[i].daysTotal >= 3 && activeCooldowns[i].daysRemaining > 0){
+              activeCooldowns[i].daysRemaining--;
+              break;
+            }
+          }
+          cleanStreak = 0;
+          activeCooldowns = activeCooldowns.filter(cd => cd.daysRemaining > 0);
+          didReduce = true;
+        }
+      }
+    }
+    dayInfo.cleanStreak = cleanStreak;
+    if(didReduce){
+      dayInfo.cooldownRemaining = activeCooldowns.reduce((sum, cd) => sum + cd.daysRemaining, 0);
+      if(0 === dayInfo.cooldownRemaining && (dayInfo.type === 'cooldown' || dayInfo.type === 'future-cooldown')){
+        dayInfo.type = isFuture ? 'future' : 'green';
+      }
+    }
+    if(key === getDayLifeDay()){
+      state.todayCooldowns = activeCooldowns
+        .filter(cd => cd.daysRemaining > 0)
+        .map(cd => ({
+          sourceDate: cd.sourceDate, reason: cd.reason,
+          daysRemaining: cd.daysRemaining, daysTotal: cd.daysTotal,
+          greenStreak: cd.greenStreak || 0
+        }));
+    }
+
+    if(isFuture && (dayInfo.type === 'future-cooldown')){
+      dayInfo.projected = true;
+    }
     result[key] = dayInfo;
     d.setDate(d.getDate() + 1);
   }
 
+  state.displayCooldowns = JSON.parse(JSON.stringify(activeCooldowns));
   return result;
 }
-
 /* ============================================================
    今日类型 / 自动失败
    ============================================================ */
@@ -1064,14 +1637,14 @@ function getTodayType(){
   let t = 'normal';
   try {
     const sch = computeSchedule();
-    const info = sch[todayStr()] || {};
+    const info = sch[getDayLifeDay()] || {};
     if(info.isRest) t = 'rest';
     else if(info.isReward) t = 'reward';
   } catch(e){}
   return t;
 }
 function autoCheckWakeFail(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const r = state.records[today];
   if(r && r.wake && r.wake.checked) return;
   const type = getTodayType();
@@ -1091,6 +1664,81 @@ function autoCheckWakeFail(){
     }
   }
 }
+function settleLifeDay(){
+  if(!state || !state.enabled) return;
+  const today = getDayLifeDay();
+  const yesterday = fmtDate(addDays(parseD(today), -1));
+  if(!state.records[yesterday]) state.records[yesterday] = {};
+  const rec = state.records[yesterday];
+  if(rec._settled) return;
+  const sch = computeSchedule();
+  const info = sch[yesterday] || {};
+  if(info.isRest){
+    rec._settled = { date: yesterday, at: nowTimeStr(), green: false, rest: true };
+    saveState(true);
+    return;
+  }
+  const green = isDayFullGreen(yesterday, sch);
+  rec._settled = { date: yesterday, at: nowTimeStr(), green: green };
+  if(green && !rec._pointsAwarded){
+    rec._pointsAwarded = true;
+    try { addPoints(2, 'full-green', '全绿', yesterday); } catch(e){}
+    try { checkGreenStreak(yesterday); } catch(e){}
+  }
+  try { awardQuietNight(yesterday); } catch(e){}
+  try { awardDinnerStreak(yesterday); } catch(e){}
+  saveState(true);
+}
+function awardDinnerStreak(dateKey){
+  const today = getDayLifeDay();
+  let streak = 0;
+  let d = parseD(dateKey);
+  for(let i = 0; 60 > i; i++){
+    const k = fmtDate(d);
+    if(today === k) break;
+    const rec = state.records[k];
+    if(!rec) break;
+    if(rec.dinnerOk !== true) break;
+    if(state.violations.some(v => v.date === k && !v.isEmergency)) break;
+    streak++;
+    d = addDays(d, -1);
+  }
+  let pts = 0, src = '';
+  if(streak === 3){ pts = 1; src = '健康晚餐 3 天'; }
+  else if(streak === 7){ pts = 2; src = '健康晚餐 7 天'; }
+  else if(streak === 14){ pts = 3; src = '健康晚餐 14 天'; }
+  else if(streak === 30){ pts = 5; src = '健康晚餐 30 天'; }
+  if(!pts) return;
+  if(!state._dinnerAwarded) state._dinnerAwarded = {};
+  const key = src + '|' + dateKey;
+  if(state._dinnerAwarded[key]) return;
+  state._dinnerAwarded[key] = true;
+  addPoints(pts, 'healthy-dinner', src, dateKey);
+}
+function awardQuietNight(dateKey){
+  const today = getDayLifeDay();
+  let streak = 0;
+  let d = parseD(dateKey);
+  for(let i = 0; 45 > i; i++){
+    const k = fmtDate(d);
+    if(today === k) break;
+    if(!state.records[k]) break;
+    const bad = state.violations.some(v => v.date === k && !v.isEmergency);
+    if(bad) break;
+    streak++;
+    d = addDays(d, -1);
+  }
+  let pts = 0, src = '';
+  if(streak === 3){ pts = 1; src = '无宵夜 3 天'; }
+  else if(streak === 7){ pts = 2; src = '无宵夜 7 天'; }
+  else if(streak === 14){ pts = 3; src = '无宵夜 14 天'; }
+  if(!pts) return;
+  if(!state._quietAwarded) state._quietAwarded = {};
+  const key = src + '|' + dateKey;
+  if(state._quietAwarded[key]) return;
+  state._quietAwarded[key] = true;
+  addPoints(pts, 'quiet-night', src, dateKey);
+}
 
 /* ============================================================
    热力图数据
@@ -1106,7 +1754,7 @@ function buildOverallHeatmap(){
     let score = 0;
     if(rec.sleep && rec.sleep.success) score++;
     if(rec.wake && rec.wake.fitness) score++;
-    if(rec.study && (rec.study.tier==='normal' || rec.study.tier==='reward')) score++;
+        if(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward')) score++;
     if(getDayExpenses(k).length > 0 && isMoneyOk(k)) score++;
     if(getDayExpenses(k).length > 0 && isDietOk(k)) score++;
     if((rec.jingji && rec.jingji.checked && rec.jingji.ok===true) || info.isJJRelease) score++;
@@ -1147,7 +1795,7 @@ function overallColor(score, total){
   return { color:'#f87171', alpha:0.55 };
 }
 function studyColor(hours){
-  if(hours<=0)  return { color:'rgba(255,255,255,.04)', alpha:1 };
+  if(0 >= hours)  return { color:'rgba(255,255,255,.04)', alpha:1 };
   if(hours>=10) return { color:'#14532d', alpha:1 };
   if(hours>=9)  return { color:'#166534', alpha:1 };
   if(hours>=8)  return { color:'#15803d', alpha:1 };
@@ -1157,7 +1805,7 @@ function studyColor(hours){
   return { color:'#86efac', alpha:0.5 };
 }
 function moneyColor(spent){
-  if(spent<=0)  return { color:'rgba(255,255,255,.04)', alpha:1 };
+  if(0 >= spent)  return { color:'rgba(255,255,255,.04)', alpha:1 };
   if(spent>=100)return { color:'#1e3a8a', alpha:1 };
   if(spent>=80) return { color:'#1e40af', alpha:1 };
   if(spent>=60) return { color:'#1d4ed8', alpha:0.9 };
@@ -1256,9 +1904,9 @@ function showCountdownScreen(){
     setTimeout(() => { quoteEl.textContent = quotes[qi]; quoteEl.style.opacity = 1; }, 300);
   }, 4000);
   const startTs = state.settings.startTimestamp;
-  const tickTimer = setInterval(() => {
+    const tickTimer = setInterval(() => {
     const diff = startTs - Date.now();
-    if(diff <= 0){
+    if(0 >= diff){
       clearInterval(quoteTimer); clearInterval(tickTimer);
       triggerUnlockAnimation();
       return;
@@ -1286,7 +1934,7 @@ function triggerUnlockAnimation(){
 }
 function spawnCrackFireworks(){
   const colors = ['#4ade80','#fbbf24','#60a5fa','#a78bfa','#f472b6'];
-  for(let i=0;i<60;i++){
+  for(let i=0;60 > i;i++){
     const ang = (i/60)*Math.PI*2, dist = 100 + Math.random()*220;
     const p = document.createElement('div');
     p.className = 'firework';
@@ -1325,7 +1973,7 @@ function playUnlockSequence(){
   setTimeout(() => cloudPush(true), 100);
 }
 function smallFirework(x,y){
-  for(let i=0;i<10;i++){
+  for(let i=0;10 > i;i++){
     const ang = (i/10)*Math.PI*2, dist = 20 + Math.random()*30;
     const p = document.createElement('div');
     p.className = 'firework';
@@ -1345,6 +1993,9 @@ function smallFirework(x,y){
 function render(preserve){
   if(!state) state = defaultState();
   checkStreakTimeout();
+  try { checkWeekRollover(); } catch(e){}
+  try { expireOldPoints(); } catch(e){}
+  try { expireShards(); } catch(e){}
 
   const notActivated = !state.enabled || !state.settings.startDate;
   if(notActivated){
@@ -1355,14 +2006,15 @@ function render(preserve){
     return;
   }
   const startTs = state.settings.startTimestamp;
-  if(startTs && Date.now() < startTs){
+  if(startTs && startTs > Date.now()){
     document.querySelector('.app').style.display = 'none';
     const act = document.getElementById('activationScreen'); if(act) act.remove();
     if(!document.getElementById('countdownScreen')) showCountdownScreen();
     return;
   }
-  const cd = document.getElementById('countdownScreen'); if(cd) cd.remove();
+    const cd = document.getElementById('countdownScreen'); if(cd) cd.remove();
   document.querySelector('.app').style.display = 'block';
+  try { settleLifeDay(); } catch(e){}
   autoCheckJJRelease();
   if(preserve !== false) scrollPos = window.scrollY;
   updateUndoBtn();
@@ -1389,7 +2041,7 @@ function render(preserve){
 }
 
 function renderDateNav(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const d = parseD(today);
   const wk = ['日','一','二','三','四','五','六'][d.getDay()];
   $('#dateMain').textContent = today;
@@ -1413,7 +2065,7 @@ function renderTabbar(){
 }
 function applyTheme(){
   const sch = computeSchedule();
-  const today = todayStr();
+  const today = getDayLifeDay();
   const info = sch[today];
   const isCool = info && (info.type==='cooldown' || info.type==='future-cooldown');
   const isRest = info && info.isRest;
@@ -1429,7 +2081,7 @@ function spawnWeather(){
   $$('.snowflake,.cloud,.party-ribbon').forEach(e => e.remove());
   if(document.body.classList.contains('cold')){
     const f = ['❄','❅','❆','•'];
-    for(let i=0;i<16;i++){
+    for(let i=0;16 > i;i++){
       const s = document.createElement('div');
       s.className = 'snowflake'; s.textContent = f[Math.floor(Math.random()*f.length)];
       s.style.left = Math.random()*100+'%';
@@ -1442,7 +2094,7 @@ function spawnWeather(){
   }
   if(document.body.classList.contains('rest')){
     const c = ['☁','☁','☁','🌸','🍃'];
-    for(let i=0;i<10;i++){
+    for(let i=0;10 > i;i++){
       const r = document.createElement('div');
       r.className = 'cloud'; r.textContent = c[Math.floor(Math.random()*c.length)];
       r.style.left = Math.random()*100+'%';
@@ -1454,7 +2106,7 @@ function spawnWeather(){
   }
   if(document.body.classList.contains('bd-celebration')){
     const rc = ['#ff4d4d','#ff8833','#ffd700','#ff69b4','#ff4040'];
-    for(let i=0;i<28;i++){
+    for(let i=0;28 > i;i++){
       const r = document.createElement('div');
       r.className = 'party-ribbon';
       r.style.left = Math.random()*100+'%';
@@ -1475,9 +2127,9 @@ function showBirthdayCelebration(){
 function autoCheckJJRelease(){
   if(!state.enabled) return;
   const sch = computeSchedule();
-  const info = sch[todayStr()];
+  const info = sch[getDayLifeDay()];
   if(info && info.isJJRelease){
-    const rec = getRecord(todayStr());
+    const rec = getRecord(getDayLifeDay());
     if(!rec.jingji || !rec.jingji.checked){
       rec.jingji = { ok:true, checked:true, msg:'释放日 · 自动打卡', autoRelease:true };
       saveState(true);
@@ -1486,7 +2138,7 @@ function autoCheckJJRelease(){
 }
 function checkPrompts(){ if(!state.enabled) return; checkRestPrompt(); checkBirthdayPrompt(); }
 function checkRestPrompt(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const sch = computeSchedule();
   const info = sch[today];
   if(!info || !info.isRestCandidate) return;
@@ -1498,7 +2150,7 @@ function checkRestPrompt(){
   showRestChoice(today);
 }
 function checkBirthdayPrompt(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   if(!state.settings.birthday) return;
   if(!isBirthdayDate(today)) return;
   if(state.birthdayCard.used || state.birthdayCard.delayResolved || state.birthdayCard.prompted) return;
@@ -1546,7 +2198,7 @@ function showBirthdayChoice(dateKey){
           s.querySelector('#bdDelayBack').onclick = () => { closeSheet(); setTimeout(() => showBirthdayChoice(dateKey), 200); };
           s.querySelector('#bdDelaySave').onclick = () => {
             const nd = s.querySelector('#bdDelayDate').value;
-            if(!nd || nd <= dateKey){ toast('日期必须晚于今天'); return; }
+            if(!nd || dateKey >= nd){ toast('日期必须晚于今天'); return; }
             pushUndo('延后生日卡');
             state.birthdayCard.delayDate = nd;
             state.birthdayCard.delayResolved = true;
@@ -1566,7 +2218,7 @@ function showDelayDatePicker(dateKey){
     sheet.querySelector('#delayBack').onclick = () => { closeSheet(); setTimeout(() => showRestChoice(dateKey), 200); };
     sheet.querySelector('#delaySave').onclick = () => {
       const nd = sheet.querySelector('#delayDate').value;
-      if(!nd || nd <= dateKey){ toast('日期必须晚于今天'); return; }
+      if(!nd || dateKey >= nd){ toast('日期必须晚于今天'); return; }
       pushUndo('延后休息日');
       state.restReschedule[dateKey] = nd;
       state.restResolved[dateKey] = 'delay';
@@ -1582,7 +2234,7 @@ function getCooldownSourcesSummary(){
   const sch = computeSchedule();
   const all = [];
   let hasCooldown = false;
-  for(let i=0;i<60;i++){
+  for(let i=0;60 > i;i++){
     const k = fmtDate(addDays(new Date(), i));
     const info = sch[k];
     if(!info) continue;
@@ -1598,26 +2250,32 @@ function getCooldownSourcesSummary(){
   return { hasCooldown:true, items };
 }
 function renderCooldownSourcesCard(){
-  const { hasCooldown, items } = getCooldownSourcesSummary();
-  if(!hasCooldown){
+  const today = getDayLifeDay();
+  const list = state.todayCooldowns || [];
+  const dayInfo = computeSchedule()[today] || {};
+  if(!list.length){
     return `
     <div class="card">
       <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">当前状态</span></div>
-      <div style="text-align:center;padding:10px 0;color:var(--dim);font-size:12.5px;">无</div>
+      <div style="text-align:center;padding:10px 0;color:var(--dim);font-size:12.5px;">今天不在冷静期</div>
     </div>`;
   }
-  const rowsHtml = items.length
-    ? items.map(it => `<div class="cd-row"><span>${esc(it.name)}</span><span>+${it.days}天</span></div>`).join('')
-    : '<div class="cd-row"><span>冷静期自动过渡</span><span>—</span></div>';
+  const rows = list.map(cd => {
+    const big = cd.daysTotal >= 3;
+    const prog = big ? ('已连续全绿 ' + (cd.greenStreak || 0) + '/2') : '每日自然减 1 天';
+    return '<div class="cd-row"><span>' + esc(cd.sourceDate) + ' · ' + esc(cd.reason) + '</span><span>剩 ' + cd.daysRemaining + '/' + cd.daysTotal + ' 天 · ' + prog + '</span></div>';
+  }).join('');
+  const total = (dayInfo.cooldownRemaining === undefined) ? 0 : dayInfo.cooldownRemaining;
+  const cs = dayInfo.cleanStreak || 0;
   return `
   <div class="card">
-    <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">触发原因</span></div>
-    <div class="cool-detail" style="margin-top:0">${rowsHtml}</div>
-    <div class="hint" style="margin-top:8px;">这些是导致你进入冷静期的原因，正常度过后冷静期会自动消失。</div>
+    <div class="card-t"><h3>❄ 冷静期来源</h3><span class="sub">今天为什么在冷静期</span></div>
+    <div class="cool-detail" style="margin-top:0">${rows}</div>
+    <div class="hint" style="margin-top:8px;">合计还需 ${total} 天。<br>3 天以上的冷静期：连续 2 天全绿减 1 天；连续 3 天无新增失败也减 1 天（当前 ${cs}/3）。<br>1–2 天的冷静期每天自然减 1 天。</div>
   </div>`;
 }
 function renderHomeCalendarCard(){
-  if(!calCursor){ const d = parseD(todayStr()); calCursor = { y:d.getFullYear(), m:d.getMonth() }; }
+  if(!calCursor){ const d = parseD(getDayLifeDay()); calCursor = { y:d.getFullYear(), m:d.getMonth() }; }
   const { y, m } = calCursor;
   const first = new Date(y, m, 1);
   const startDay = first.getDay();
@@ -1625,8 +2283,8 @@ function renderHomeCalendarCard(){
   const today = todayStr();
   const sch = computeSchedule();
   let html = '';
-  for(let i=0;i<startDay;i++) html += '<div class="cal-day empty"></div>';
-  for(let day=1; day<=daysInMonth; day++){
+  for(let i=0;startDay > i;i++) html += '<div class="cal-day empty"></div>';
+  for(let day=1; daysInMonth >= day; day++){
     const key = `${y}-${pad2(m+1)}-${pad2(day)}`;
     const info = sch[key] || {};
     const rec = state.records[key];
@@ -1637,7 +2295,10 @@ function renderHomeCalendarCard(){
     if(info.isBirthday) cls.push('birthday');
     if(info.isRest) cls.push('rest');
     if(info.isRestCandidate) cls.push('rest-candidate');
-    if(info.type === 'cooldown' || info.type === 'future-cooldown') cls.push('cool');
+    if(info.type === 'cooldown' || info.type === 'future-cooldown'){
+      cls.push('cool');
+      if(isFuture) cls.push('cool-proj');
+    }
     else if(info.isReward) cls.push('reward');
     else if(info.isMealDay) cls.push('meal');
     else if(info.type === 'green') cls.push('green');
@@ -1645,7 +2306,7 @@ function renderHomeCalendarCard(){
     if(info.isJJRelease) cls.push('jj-release');
     const dots = [
       rec && rec.sleep && rec.sleep.success ? 'on sleep' : '',
-      rec && rec.study && rec.study.tier && rec.study.tier !== 'conservative' ? 'on study' : '',
+      rec && rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward') ? 'on study' : '',
       rec && rec.jingji && rec.jingji.ok ? 'on jj' : '',
       rec && rec.wake && rec.wake.fitness ? 'on wake' : ''
     ].filter(Boolean).map(c => `<i class="dot ${c}"></i>`).join('');
@@ -1662,8 +2323,21 @@ function renderHomeCalendarCard(){
     <div class="cal-week">${['日','一','二','三','四','五','六'].map(d => `<span>${d}</span>`).join('')}</div>
     <div class="cal-grid">${html}</div>
     <div class="heat-legend" style="margin-top:10px">
-      <span>❄ 冷静</span><span>◆ 食堂日</span><span>★ 奖励日</span><span>💧 释放日</span><span>🏖 休息日</span>
+      <span>❄ 冷静</span><span>❄ 虚线=预测</span><span>◆ 食堂日</span><span>★ 奖励日</span><span>💧 释放日</span><span>🏖 休息日</span>
     </div>
+    ${(() => {
+      let last = '';
+      const t0 = getDayLifeDay();
+      for(let i = 0; 90 > i; i++){
+        const kk = fmtDate(addDays(parseD(t0), i));
+        const ii = sch[kk];
+        if(ii && (ii.type === 'future-cooldown' || ii.type === 'cooldown')) last = kk;
+        else if(last) break;
+      }
+      if(!last) return '';
+      if(last === t0) return '<div class="hint" style="margin-top:8px;">今天之后冷静期就结束了。</div>';
+      return '<div class="hint" style="margin-top:8px;">预测：若不再新增失败，冷静期预计 <b style="color:#a5d8f3">' + last + '</b> 结束（虚线为预测）。<br>每条冷静期最长持续 7 天，到期自动消散。</div>';
+    })()}
   </div>`;
 }
 
@@ -1671,7 +2345,7 @@ function renderHomeCalendarCard(){
    首页
    ============================================================ */
 function viewHome(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const sch = computeSchedule();
   const info = sch[today] || {};
   const rec = state.records[today] || {};
@@ -1682,16 +2356,43 @@ function viewHome(){
   const nextRs = TIERS_RESTART.find(t => t.count > rs.current);
   const resistSlots = Math.max(6, Math.ceil((r.current+1)/6)*6);
   const restartSlots = Math.max(3, Math.ceil((rs.current+1)/3)*3);
-  const activeCards = getActiveCards();
+  const activeCards = [];
   const trees = state.trees || [];
   const grown = trees.filter(t => t.status === 'grown');
   const isBdImm = rec.birthdayCard === true;
 
-  if(info.isRest){
+    if(info.isRest){
     return `<div class="rest-hero"><div class="rest-icon">🏖</div><div class="rest-title">今天好好休息</div><div class="rest-sub">大周期已完成，不用打卡。</div></div>`;
   }
 
+  const yesterday = fmtDate(addDays(new Date(), -1));
+  const yRec = state.records[yesterday] || {};
+  let settleAlert = '';
+  if(yRec._settled){
+    const ySch = sch[yesterday] || {};
+    const ySleepOk = yRec.sleep && yRec.sleep.success;
+    const yStudyOk = yRec.study && (yRec.study.isGreen === true || yRec.study.tier === 'normal' || yRec.study.tier === 'reward');
+    const yJJOk = (yRec.jingji && yRec.jingji.checked && yRec.jingji.ok === true) || ySch.isJJRelease;
+    const yMoneyOk = isMoneyOk(yesterday);
+    const yDietOk = isDietOk(yesterday);
+    const parts = [
+      ySleepOk ? '睡觉✓' : '睡觉✗',
+      yStudyOk ? '学习✓' : '学习✗',
+      yJJOk ? '养精✓' : '养精✗',
+      yMoneyOk ? '用钱✓' : '用钱✗',
+      yDietOk ? '饮食✓' : '饮食✗'
+    ];
+    const tag = yRec._settled.green ? '<span style="color:#86efac;font-weight:600;">全绿 ✓</span>' : '<span style="color:#fca5a5;font-weight:600;">未全绿</span>';
+    settleAlert = `<div class="alert ${yRec._settled.green?'ok':'gold'}"><span class="ico">📋</span><div><b>昨日结算 · ${yesterday} · ${tag}</b><p>${parts.join(' · ')}</p></div></div>`;
+  }
+
   let alerts = [];
+  if(info.isExempt){
+    alerts.push({ lv:'purple', ico:'🛡️', t: rec.protect ? '保护卡生效中' : '病假豁免中', d:'今日全部豁免且不计积累，可继续记录真实数据' });
+  }
+  if(info.isMakeup){
+    alerts.push({ lv:'gold', ico:'✒️', t:'补签日', d:'补签数据已记录，不计入小周期积累与全绿统计' });
+  }
   if(info.type === 'cooldown' || info.type === 'future-cooldown')
     alerts.push({ lv:'danger', ico:'❄', t:`冷静期中 · 剩余 ${info.cooldownRemaining||0} 天`, d:'冷静期 ≥ 3 天时，全绿可减天' });
   if(info.isJJRelease)
@@ -1711,13 +2412,13 @@ function viewHome(){
   const overallHeat = buildOverallHeatmap();
 
   return `
-  ${activeCards.map(c => renderRewardCard(c)).join('')}
+  
   <div class="energy">
     <div class="energy-row"><span style="color:var(--muted)">💪 意志力抵抗</span><span class="energy-val">${r.current} 连续</span></div>
-    <div class="dots">${Array.from({length:resistSlots}).map((_,i) => `<div class="dot-p ${i<r.current?'on-resist':''}"></div>`).join('')}</div>
+        <div class="dots">${Array.from({length:resistSlots}).map((_,i) => `<div class="dot-p ${r.current > i?'on-resist':''}"></div>`).join('')}</div>
     <div class="energy-meta"><span>历史最长 <b>${r.max}</b></span>${nextR ? `<span>距下档 <b>${nextR.count-r.current}</b></span>` : '<span>已全解锁</span>'}</div>
     <div class="energy-row" style="margin-top:14px;"><span style="color:var(--muted)">🔄 重新启动</span><span class="energy-val" style="color:#c4b5fd">${rs.current} 连续</span></div>
-    <div class="dots">${Array.from({length:restartSlots}).map((_,i) => `<div class="dot-p ${i<rs.current?'on-restart':''}"></div>`).join('')}</div>
+        <div class="dots">${Array.from({length:restartSlots}).map((_,i) => `<div class="dot-p ${rs.current > i?'on-restart':''}"></div>`).join('')}</div>
     <div class="energy-meta"><span>历史最长 <b>${rs.max}</b></span>${nextRs ? `<span>距下档 <b>${nextRs.count-rs.current}</b></span>` : '<span>已全解锁</span>'}</div>
   </div>
 
@@ -1736,6 +2437,7 @@ function viewHome(){
     </div>
   </div>
 
+    ${settleAlert}
   ${alerts.map(a => `<div class="alert ${a.lv}"><span class="ico">${a.ico}</span><div><b>${esc(a.t)}</b><p>${esc(a.d)}</p></div></div>`).join('')}
 
   <div class="card">
@@ -1746,6 +2448,11 @@ function viewHome(){
     <div class="heat-grad"><span>0/6</span><div class="bar" style="background:linear-gradient(90deg,#f87171,#fb923c,#fbbf24,#4ade80,#22c55e,#16a34a)"></div><span>6/6</span></div>
   </div>
 
+  ${state.jjBank > 0 ? `<div class="card" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.35)">
+    <div class="card-t"><h3>💧 养精蓄锐累积</h3><span class="sub">${state.jjBank} 个周期</span></div>
+    <div class="hint" style="margin-bottom:8px;">累积越久释放越多（1个+2、2个+5、3个+10、之后每个+4）。</div>
+    <button class="btn btn-p" style="background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff" data-act="release-jj">释放 ${state.jjBank} 个 → +${jjBankPoints(state.jjBank)} 分</button>
+  </div>` : ''}
   <div class="card">
     <div class="card-t"><h3>今日打卡状态</h3><span class="sub">${today}</span></div>
     ${items.map(it => `<div class="task ${it.checked?'checked':''} ${it.auto?'auto':''} ${it.checked&&!it.ok?'failed':''}"><div class="task-head"><div class="task-icon">${it.icon}</div><div class="task-title"><h4>${it.name}</h4><p>${it.desc}</p></div><div style="font-size:11px;color:var(--muted);text-align:right">${it.value||''}</div></div></div>`).join('')}
@@ -1775,7 +2482,8 @@ function getDayItems(rec, info, dateKey){
   return [
     { key:'sleep', icon:'🌙', name:'睡觉', desc:'23:00-5:00打卡', checked:!!(rec.sleep&&rec.sleep.checked), ok:!!(rec.sleep&&rec.sleep.success), value:rec.sleep&&rec.sleep.time||'' },
     { key:'wake',  icon:'☀', name:'起床', desc:'4:00-7:15，7:15后自动失败', checked:!!(rec.wake&&rec.wake.checked), ok:!!(rec.wake&&rec.wake.fitness), value:rec.wake&&rec.wake.time||'' },
-    { key:'study', icon:'📚', name:'学习', desc:'10h+奖励 · 9-10h正常', checked:!!(rec.study&&rec.study.checked), ok:!!(rec.study&&(rec.study.tier==='normal'||rec.study.tier==='reward')), value:rec.study&&rec.study.hours?rec.study.hours+'h':'' },
+            { key:'study', icon:'📚', name:'学习', desc:'10h+奖励 · 9-10h正常 · 8-9h恢复日', checked:!!(rec.study&&rec.study.checked), ok:!!(rec.study&&(rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward')), value:rec.study&&rec.study.hours?rec.study.hours+'h':'' },
+    { key:'fitness', icon:'💪', name:'健身', desc:(() => { const w = rec.wake && rec.wake.time; if(!w) return '先打卡起床'; const f = fitTierOf(w); return f.ok ? ('今天可健身 ' + f.label) : f.label; })(), checked:!!(rec.fitness && rec.fitness.checked), ok:!!(rec.fitness && (rec.fitness.skip || (rec.fitness.minutes > 0))), value: rec.fitness ? (rec.fitness.skip ? '不健身' : ((rec.fitness.minutes || 0) + '分钟')) : '' },
     { key:'money', icon:'💰', name:'用钱', desc:'禁垃圾食品', checked:moneyItems.length>0, ok:moneyOk, value:moneyItems.length>0?moneyItems.length+'笔':'' },
     { key:'diet',  icon:'🥗', name:'饮食', desc:'由用钱联动判定', checked:moneyItems.length>0, ok:dietOk, value:moneyItems.length>0?(dietOk?'正常':'异常'):'' },
     { key:'jingji',icon:'🧘', name:'养精蓄锐', desc:isJJRelease?'💧 释放日 · 自动打卡':'每天坚持一下', checked:jjAuto?true:!!(rec.jingji&&rec.jingji.checked), ok:isJJRelease?true:!!(rec.jingji&&rec.jingji.ok===true), auto:jjAuto, value:jjAuto?'💧':(rec.jingji&&rec.jingji.checked?(rec.jingji.ok?'✓':'破戒'):'') }
@@ -1786,7 +2494,7 @@ function getDayItems(rec, info, dateKey){
    记录页
    ============================================================ */
 function viewRecord(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const rec = getRecord(today);
   const sch = computeSchedule();
   const info = sch[today] || {};
@@ -1801,6 +2509,7 @@ function viewRecord(){
   const wakeOk = rec.wake && rec.wake.fitness;
   const studyChecked = rec.study && rec.study.checked;
   const fitnessChecked = rec.fitness && rec.fitness.checked;
+  const fit = fitTierOf(rec.wake && rec.wake.time);
   const jjChecked = rec.jingji && rec.jingji.checked;
   const jjEffective = jjChecked || isJJRelease;
   const todayExpenses = getDayExpenses(today);
@@ -1817,6 +2526,12 @@ function viewRecord(){
   const wakeDesc = isReward ? '窗口 4:00-9:00 · 7:20 前达标可健身' : '窗口 4:00-7:15 · 5:20 前达标可健身';
 
   let banners = '';
+  if(info.isExempt){
+    banners += `<div class="alert purple" style="margin-bottom:10px"><span class="ico">🛡️</span><div><b>${rec.protect ? '🛡️ 保护卡生效中' : '🤒 病假豁免中'}</b><p>今日全部豁免且不计积累，可继续记录真实数据。</p></div></div>`;
+  }
+  if(info.isMakeup){
+    banners += `<div class="alert gold" style="margin-bottom:10px"><span class="ico">✒️</span><div><b>补签日</b><p>补签数据已记录，不计入小周期积累与全绿统计。</p></div></div>`;
+  }
   if(info.isRestCandidate && !state.restResolved[today]){
     banners += `<div class="alert rest" style="margin-bottom:10px"><span class="ico">🏖</span><div><b>今天是休息日候选</b><p>请选择：今天休息 / 延后。<button class="btn btn-p btn-sm" style="margin-top:8px" data-act="openRestChoice">🏖 立即选择</button></p></div></div>`;
   }
@@ -1845,17 +2560,21 @@ function viewRecord(){
     </div>
 
     <div class="task ${fitnessChecked?'checked':''} ${!wakeOk?'locked':''}">
-      <div class="task-head"><div class="task-icon">💪</div><div class="task-title"><h4>健身</h4><p>${wakeOk?'起床达标，可打卡（选做）':'需起床达标'}</p></div></div>
+      <div class="task-head"><div class="task-icon">💪</div><div class="task-title"><h4>健身</h4><p>${fit.ok ? ('今天可健身 ' + fit.label + '（起床 ' + (rec.wake ? rec.wake.time : '') + '）') : (wakeOk ? fit.label : '需先打卡起床')}</p></div></div>
       ${!fitnessChecked
-        ? `<button class="task-btn full" data-checkin="fitness" ${!wakeOk?'disabled':''}>点击打卡</button>`
-        : `<div class="task-result ok">健身打卡成功 ✓</div>`}
+        ? (fit.ok
+            ? `<div style="display:flex;gap:8px"><button class="task-btn full" data-checkin="fitness">完成 ${fit.label}</button><button class="task-btn full" style="background:var(--card2);color:var(--muted);border:1px solid var(--line)" data-act="fitness-skip">今天不健身</button></div>`
+            : `<button class="task-btn full" disabled>${wakeOk ? '今天不安排健身' : '需先打卡起床'}</button>`)
+        : (rec.fitness && rec.fitness.skip
+            ? `<div class="task-result" style="opacity:.7">今天不健身（不计失败）</div>`
+            : `<div class="task-result ok">健身完成 ${rec.fitness ? (rec.fitness.minutes || 0) : 0} 分钟 ✓</div>`)}
     </div>
 
     <div class="task ${studyChecked?'checked':''} ${studyChecked&&!(rec.study.tier==='normal'||rec.study.tier==='reward')?'failed':''}">
-      <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>${isReward?'奖励日 ≥7h正常':'10h+奖励 · 9-10h正常 · 8-9h保守'}</p></div></div>
+      <div class="task-head"><div class="task-icon">📚</div><div class="task-title"><h4>学习</h4><p>${isReward?'奖励日 ≥7h正常':'10h+奖励 · 9-10h正常 · 8-9h恢复日'}</p></div></div>
       ${!studyChecked
         ? `<div style="display:flex;gap:8px"><input class="txt" type="number" step="0.1" id="in_study" placeholder="小时" value="${rec.study?.hours||''}" style="flex:1"><button class="task-btn" data-checkin="study">打卡</button></div>`
-        : `<div class="task-result ${rec.study.tier==='normal'||rec.study.tier==='reward'?'ok':'bad'}">${rec.study.hours}h · ${rec.study.label}</div>`}
+               : `<div class="task-result ${(rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward')?'ok':'bad'}">实际 ${rec.study.hours}h · 等效 ${(rec.study.eff === undefined || rec.study.eff === null) ? rec.study.hours : rec.study.eff}h · ${rec.study.label}</div>`}
     </div>
   </div>
 
@@ -1869,14 +2588,20 @@ function viewRecord(){
 
   <div class="card">
     <div class="card-t"><h3>用钱 / 饮食</h3><span class="sub">今日已花 ¥${todaySpent.toFixed(2)}</span></div>
-    <div class="hint" style="font-size:11px;color:var(--dim);margin-bottom:8px;">💡 19:00 后点食物标签会强制弹窗</div>
-    <div class="chips" style="margin-bottom:10px">
-      ${state.tags.map(t => { const cat = getCat(t.catId); return `<div class="chip ${cat.isJunk?'junk':''}" data-add-tag="${t.id}">${esc(t.name)}<span class="price">¥${t.price}</span></div>`; }).join('')}
+    <div class="hint" style="font-size:11px;color:var(--dim);margin-bottom:8px;">💡 只要选一个大类 + 填金额，一次记完（不用再建标签）</div>
+    <div class="chips" style="margin-bottom:8px">
+      ${state.cats.map(c => `<div class="chip ${c.id === moneyCat ? 'on' : ''} ${c.isJunk ? 'junk' : ''}" data-mcat="${c.id}">${esc(c.name)}</div>`).join('')}
     </div>
     ${pending.length>0 ? `<div style="margin-bottom:8px;font-size:10.5px;color:var(--gold);">待记录：</div><div style="margin-bottom:10px;">${pending.map(p => `<span class="pending-tag">${esc(p.name)} ¥${p.price}<span class="rm" data-rm-pending="${p.id}">×</span></span>`).join('')}</div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <input class="txt" type="number" step="0.01" id="in_amt" placeholder="金额" style="flex:1">
-      <button class="btn btn-g btn-sm" style="width:auto;padding:10px 14px;" data-act="add-manual">添加</button>
+      <input class="txt" id="in_name" placeholder="名称（可留空，默认用大类名）" style="flex:2">
+      <input class="txt" type="number" step="0.01" id="in_amt" placeholder="金额" style="flex:1;max-width:110px">
+    </div>
+    <div style="margin-bottom:8px;">
+      <button class="btn btn-g btn-sm" style="width:100%;padding:10px 12px;" data-act="add-manual">加到今日</button>
+    </div>
+    <div class="chips" style="margin-bottom:8px;">
+      <div class="chip ${rec.dinnerOk ? 'on' : ''}" data-dinner-toggle="1">🍽 晚餐 15–17 元（健康晚餐日）</div>
     </div>
     <button class="btn btn-p" data-act="submit-money">提交今日记录</button>
     ${pending.length>0 ? `<button class="btn btn-g btn-sm" style="width:100%;margin-top:6px;color:#fca5a5;" data-act="clear-pending">清空待记录</button>` : ''}
@@ -1910,6 +2635,7 @@ function viewRecord(){
 
   ${allCoreChecked ? `<div class="card" style="background:rgba(74,222,128,.08)"><div class="hint" style="margin-bottom:8px;">五项核心已打卡完成。</div><button class="btn btn-p" data-act="openConfirm">✓ 核对今天的打卡信息</button></div>` : ''}
 
+  ${showManage ? `
   <div class="card">
     <div class="card-t"><h3>大类管理</h3><button class="btn btn-p btn-sm" data-act="add-cat">＋ 新增大类</button></div>
     <div class="hint" style="margin-bottom:8px;">「食物」大类进入饮食统计，「垃圾」大类触发饮食异常。</div>
@@ -1930,7 +2656,8 @@ function viewRecord(){
         <div class="tag-list">${tags.map(t => `<span class="tag-item" data-edit-tag="${t.id}">${esc(t.name)} ¥${t.price}<span class="rm" data-rm-tag="${t.id}">×</span></span>`).join('')}</div>
       </div>`;
     }).join('') || '<div class="hint">还没有标签</div>'}
-  </div>`;
+  </div>
+  ` : `<div class="card"><button class="btn btn-g" style="width:100%" data-act="toggle-manage">⚙ 管理大类与标签 ▼</button><div class="hint" style="margin-top:8px;">日常记账用不到这里，想改分类名称时再展开。</div></div>`}`;
 }
 
 /* ============================================================
@@ -1943,7 +2670,7 @@ function viewWillpower(){
   const cur = willTab === 'resist' ? r : rs;
   const tierHtml = tiers.map((t,idx) => {
     const reached = cur.current >= t.count || cur.max >= t.count;
-    const isNext = !reached && cur.current < t.count && (idx===0 || cur.current >= tiers[idx-1].count);
+    const isNext = !reached && t.count > cur.current && (idx===0 || cur.current >= tiers[idx-1].count);
     return `<div class="tier ${reached?'reached':''} ${isNext?'next':''}"><span class="tier-ico">${t.icon}</span><span class="tier-name">${t.label}</span><span class="tier-cnt">${cur.current}/${t.count}</span></div>`;
   }).join('');
   const typeLabel = willTab === 'resist' ? '抵抗' : '重启';
@@ -1958,9 +2685,28 @@ function viewWillpower(){
     <div style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5;">必须填写冲动对象 + 至少一个情绪才能提交<br>强度 ≥ 7 才计入连续</div>
   </div>
   <div class="card">
-    <div class="card-t"><h3>奖励门槛</h3><span class="sub">当前连续 ${cur.current}</span></div>
-    ${tierHtml}
+    <div class="card-t"><h3>节点奖励</h3><span class="sub">当前连续 ${cur.current}</span></div>
+    ${tiers.map((t, idx) => {
+      const reached = cur.current >= t.count || cur.max >= t.count;
+      const isNext = !reached && t.count > cur.current && (idx === 0 || cur.current >= tiers[idx - 1].count);
+      const pts = t.count >= 12 ? 3 : (t.count >= 6 ? 2 : 1);
+      return `<div class="tier ${reached?'reached':''} ${isNext?'next':''}"><span class="tier-ico">${t.icon}</span><span class="tier-name">${t.label}<div style="font-size:10px;color:var(--muted);font-weight:400">达成自动 +${pts} 积分</div></span><span class="tier-cnt">${cur.current}/${t.count}</span></div>`;
+    }).join('')}
+    <div class="hint" style="margin-top:8px;">
+      · 达成节点 → 自动发积分（1/2/3 分，按档位）<br>
+      · 积分可在「卡包」兑换约饭券、功能卡、碎片<br>
+      · 受每周 10 分上限约束，超出顺延到下周
+    </div>
   </div>
+  ${(() => {
+    const pend = (state.tierPrizes || []).filter(p => p.status === 'pending');
+    if(!pend.length) return '';
+    return `<div class="card"><div class="card-t"><h3>🎁 待领取节点</h3><span class="sub">${pend.length} 个</span></div>
+      ${pend.map(p => `<div class="rec"><span style="font-size:20px">${p.icon}</span><div class="rec-mid"><div class="rec-name">${esc(p.label)}</div><div class="rec-meta"><span>连续 ${p.tier} 次</span><span>${p.date}</span></div></div>
+        <button class="rec-edit" style="border-color:rgba(251,191,36,.4);color:#fde68a;background:rgba(251,191,36,.1)" data-tier-points="${p.id}">领 ${p.points} 分</button></div>`).join('')}
+      <div class="hint" style="margin-top:8px;">节点奖励统一发积分，用积分去卡包兑换约饭券/功能卡/碎片。</div>
+    </div>`;
+  })()}
   <div class="card">
     <div class="card-t"><h3>历史记录</h3><span class="sub">${actions.length} 条</span></div>
     ${actions.length ? `<div class="rec-list">${actions.slice(0,20).map(a => `
@@ -2031,10 +2777,10 @@ function viewEmotion(){
     const top = Object.entries(dayEmos).sort((a,b) => b[1]-a[1])[0];
     heat.push({ date:k, day:+k.slice(8), emo: top?top[0]:null, count: dayActs.length, isToday: k===todayStr() });
   }
-  let tip = '';
+    let tip = '';
   if(crossList.length){
-    const worst = crossList.reduce((a,b) => a.rate < b.rate ? a : b);
-    if(worst.rate < 50){
+    const worst = crossList.reduce((a,b) => b.rate > a.rate ? a : b);
+    if(50 > worst.rate){
       tip = `<div class="weather-tip">💡 当你在「${worst.name}」状态下，成功率只有 <b style="color:#fde68a">${worst.rate}%</b>。<br>下次出现这种情绪时，可以试试先深呼吸 5 分钟，或者先记录再决定。</div>`;
     } else {
       tip = `<div class="weather-tip">💡 目前各个状态下你都表现得很稳，继续保持！</div>`;
@@ -2075,6 +2821,32 @@ function viewEmotion(){
     </div>
   </div>
 
+  ${(() => {
+    const tips = {
+      '焦虑':['先写下 3 件你真正能控制的事','只做其中最小的一步，5 分钟算数','剩下的事设个时间再想'],
+      '疲惫':['先闭眼 10 分钟，别硬撑','补水 + 站起来走两圈','今晚提前 30 分钟睡'],
+      '压力':['把任务拆成 15 分钟一段','先做最容易启动的那段','完成后奖励自己 5 分钟休息'],
+      '孤独':['给一个朋友发条消息，不用有理由','出门走 10 分钟','把今天写下来'],
+      '委屈':['先把事情写下来，不评价','问自己：我真正需要的是什么','找一个人说出来'],
+      '愤怒':['先离开现场 5 分钟','喝杯水、深呼吸 4 次','等情绪降下来再决定'],
+      '兴奋':['把冲动记下来，等 24 小时','先做一件正事再奖励自己','别在这时候做花钱决定'],
+      '无聊':['换一个环境','做一件 5 分钟的小事','列 3 个想做但一直没开始的'],
+      '自责':['只写事实，不写评价','问：下次具体改哪一步','允许自己这一次'],
+      '空虚':['做一件有具体结果的小事','出门晒太阳 10 分钟','联系一个人']
+    };
+    const cnt = {};
+    state.actions.forEach(a => (a.emotions || []).forEach(e => cnt[e] = (cnt[e] || 0) + 1));
+    const list = Object.keys(cnt).map(k => ({ k: k, n: cnt[k] })).sort((a,b) => b.n - a.n);
+    if(!list.length) return '';
+    const top = list[0].k;
+    const acts = tips[top] || ['先记录一次，再决定要不要做'];
+    return `<div class="card" style="background:linear-gradient(150deg,rgba(251,191,36,.10),rgba(167,139,250,.06));border-color:rgba(251,191,36,.35)">
+      <div class="card-t"><h3>🎯 给你的建议</h3><span class="sub">基于「${esc(top)}」${list[0].n} 次</span></div>
+      <div class="hint" style="margin-bottom:8px;">你最容易在这类情绪下出问题，下次它出现时，按顺序做这三件事：</div>
+      ${acts.map((t, i) => `<div class="rec"><span class="rec-dot" style="background:#fbbf24"></span><div class="rec-mid"><div class="rec-name" style="font-size:12.5px">${i + 1}. ${esc(t)}</div></div></div>`).join('')}
+      <div class="hint" style="margin-top:8px;">做完了再决定：要不要吃、要不要破戒。记录的瞬间，冲动就已经减弱了。</div>
+    </div>`;
+  })()}
   <div class="card">
     <div class="card-t"><h3>💭 情绪分布</h3><span class="sub">${all.length} 条</span></div>
     ${emoList.length ? emoList.map(([name,cnt]) => `<div class="bar-row"><span class="bar-name">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxEmo*100}%;background:linear-gradient(90deg,${EMO_COLORS[name]||'#a78bfa'},${EMO_COLORS[name]||'#8b5cf6'})"></div></div><span class="bar-cnt">${cnt}</span></div>`).join('') : '<div class="empty">还没有情绪记录</div>'}
@@ -2090,6 +2862,25 @@ function viewEmotion(){
     ${crossList.length ? crossList.map(c => `<div class="cross-row"><span>${esc(c.name)} <span style="color:var(--dim);font-size:10.5px;">(${c.total}条)</span></span><span class="cross-rate" style="color:${c.rate>=60?'#86efac':c.rate>=40?'#fde68a':'#fca5a5'};">${c.rate}% 成功</span></div>`).join('') : '<div class="empty">至少需要 2 条同情绪记录</div>'}
   </div>
 
+  ${(() => {
+    const sch = computeSchedule();
+    const cdDays = {};
+    Object.keys(sch).forEach(k => { if(sch[k] && sch[k].cooldownBreakdown && sch[k].cooldownBreakdown.length) cdDays[k] = true; });
+    const emoCd = {}, emoAll = {};
+    state.actions.forEach(a => {
+      (a.emotions || []).forEach(e => {
+        emoAll[e] = (emoAll[e] || 0) + 1;
+        if(cdDays[a.date]) emoCd[e] = (emoCd[e] || 0) + 1;
+      });
+    });
+    const rows = Object.keys(emoAll).map(e => ({ name:e, total: emoAll[e], cd: emoCd[e] || 0, rate: Math.round((emoCd[e] || 0) / emoAll[e] * 100) }))
+      .filter(x => x.total >= 2).sort((a,b) => b.rate - a.rate).slice(0, 6);
+    if(!rows.length) return '';
+    return `<div class="card"><div class="card-t"><h3>❄ 情绪 × 冷静期</h3><span class="sub">哪种情绪最容易掉进去</span></div>
+      ${rows.map(r => `<div class="cross-row"><span>${esc(r.name)} <span style="color:var(--dim);font-size:10.5px;">(${r.total}次)</span></span><span class="cross-rate" style="color:${r.rate >= 50 ? '#fca5a5' : (r.rate >= 25 ? '#fde68a' : '#86efac')};">${r.rate}% 当天进冷静</span></div>`).join('')}
+      <div class="hint" style="margin-top:8px;">统计口径：该情绪出现的日子里，有多少天因为当天的问题生成了新冷静期。</div>
+    </div>`;
+  })()}
   <div class="card">
     <div class="card-t"><h3>📜 时间轴</h3><span class="sub">最近 20 条</span></div>
     ${all.length ? `<div class="rec-list">${all.slice(0,20).map(a => `
@@ -2105,7 +2896,7 @@ function viewEmotion(){
    资金页
    ============================================================ */
 function viewFinance(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const monthKey = today.slice(0,7);
   const thisMonth = state.expenses.filter(e => e.date.slice(0,7) === monthKey);
   const spent = thisMonth.reduce((a,b) => a + (b.price||0), 0);
@@ -2151,12 +2942,12 @@ function viewFinance(){
    饮食页
    ============================================================ */
 function viewDiet(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const todayFoods = getDayFoods(today);
   const dietOk = isDietOk(today);
   const range = 30;
   const startDate = fmtDate(addDays(parseD(today), -range+1));
-  const recentFoods = state.expenses.filter(e => e.date >= startDate && e.date <= today && getCat(e.catId).isFood);
+  const recentFoods = state.expenses.filter(e => e.date >= startDate && today >= e.date && getCat(e.catId).isFood);
   const byCat = {};
   recentFoods.forEach(e => { const cid = e.catId || 'unknown'; if(!byCat[cid]) byCat[cid] = {count:0,amount:0,junk:0}; byCat[cid].count++; byCat[cid].amount += (e.price||0); if(getCat(e.catId).isJunk) byCat[cid].junk++; });
   const catRows = Object.entries(byCat).map(([id,v]) => { const c = getCat(id); return { name: c.name, color: c.color, count: v.count, amount: v.amount, junk: v.junk }; }).sort((a,b) => b.count - a.count);
@@ -2201,6 +2992,482 @@ function viewDiet(){
 /* ============================================================
    卡包
    ============================================================ */
+
+
+/* ============================================================
+   食物库（店 → 食物，带风险等级/标签/黑白名单）
+   ============================================================ */
+const FOOD_TAGS = [
+  { id:'fried',  name:'油炸' }, { id:'sugar',  name:'高糖' },
+  { id:'bread',  name:'面包' }, { id:'cream',  name:'奶油' },
+  { id:'spicy',  name:'辛辣' }, { id:'oily',   name:'油腻' },
+  { id:'dairy',  name:'含奶' }, { id:'nuts',   name:'坚果' },
+  { id:'cold',   name:'生冷' }
+];
+const FOOD_RISK_LABEL = ['', '低', '中低', '中', '中高', '高' ];
+const MEAL_RISK_MAX = {
+  stir:2, dine:3, sweet:3, grill:4, hotpot:4, gather:4, fast:4, buffet:5
+};
+function ensureFoodLib(){
+  if(!state.foodLib || Array.isArray(state.foodLib)){
+    const old = Array.isArray(state.foodLib) ? state.foodLib : [];
+    state.foodLib = { shops: [], foods: [] };
+    for(let i = 0; old.length > i; i++){
+      const f = old[i];
+      state.foodLib.foods.push({
+        id: f.id || nid('fd_'), shopId: '', name: f.name || '未命名',
+        price: f.price || 0, catId: f.catId || 'c_normal',
+        risk: (getCat(f.catId).isJunk ? 5 : 2), tags: [], list: 'white', note: ''
+      });
+    }
+  }
+  if(!state.foodLib.shops) state.foodLib.shops = [];
+  if(!state.foodLib.foods) state.foodLib.foods = [];
+  return state.foodLib;
+}
+function getShopName(id){
+  const lib = ensureFoodLib();
+  const sp = lib.shops.find(x => x.id === id);
+  return sp ? sp.name : '';
+}
+function addFoodShop(name){
+  const lib = ensureFoodLib();
+  const n = (name || '').trim();
+  if(!n){ toast('请输入店名'); return null; }
+  if(lib.shops.some(x => x.name === n)){ toast('这家店已经有了'); return null; }
+  const sp = { id: nid('sh_'), name: n };
+  lib.shops.push(sp);
+  saveState(); return sp;
+}
+function addFoodItem(data){
+  const lib = ensureFoodLib();
+  const name = (data.name || '').trim();
+  if(!name){ toast('请输入食物名称'); return false; }
+  let shopId = data.shopId || '';
+  if(data.shopName){
+    const sp = addFoodShop(data.shopName);
+    if(sp) shopId = sp.id;
+  }
+  lib.foods.push({
+    id: nid('fd_'), shopId: shopId, name: name,
+    price: Number(data.price) || 0, catId: data.catId || 'c_normal',
+    risk: Number(data.risk) || 2,
+    tags: data.tags || [],
+    list: data.list === 'black' ? 'black' : 'white',
+    note: (data.note || '').trim()
+  });
+  saveState(); render();
+  toast('已加入食物库');
+  return true;
+}
+function removeFoodItem(id){
+  const lib = ensureFoodLib();
+  const before = lib.foods.length;
+  lib.foods = lib.foods.filter(f => f.id !== id);
+  if(before === lib.foods.length) return;
+  saveState(); render();
+  toast('已移出食物库');
+}
+function getFoodsForCoupon(typeId){
+  const lib = ensureFoodLib();
+  const maxRisk = MEAL_RISK_MAX[typeId] || 3;
+  return lib.foods.map(f => {
+    let ok = true, why = '';
+    if(f.list === 'black'){ ok = false; why = '黑名单'; }
+    else if(f.risk > maxRisk){ ok = false; why = '风险等级超出本券（上限 ' + FOOD_RISK_LABEL[maxRisk] + '）'; }
+    return { f: f, ok: ok, why: why };
+  });
+}
+function openFoodLibrary(){
+  ensureFoodLib();
+  const lib = state.foodLib;
+  const rows = lib.foods.length
+    ? lib.foods.map(f => {
+        const shop = getShopName(f.shopId);
+        const tl = (f.tags || []).map(t => { const d = FOOD_TAGS.find(x => x.id === t); return d ? d.name : t; }).join('/');
+        return `<div class="rec"><span class="rec-dot" style="background:${f.list === 'black' ? '#f87171' : '#4ade80'}"></span><div class="rec-mid"><div class="rec-name">${esc(f.name)} <span style="font-size:10px;color:var(--muted)">${esc(shop || '未指定店')}</span></div><div class="rec-meta"><span>¥${f.price}</span><span>风险${FOOD_RISK_LABEL[f.risk] || f.risk}</span>${tl ? '<span>' + esc(tl) + '</span>' : ''}${f.list === 'black' ? '<span style="color:#fca5a5">黑名单</span>' : ''}</div></div><button class="rec-rm" data-food-del="${f.id}">×</button></div>`;
+      }).join('')
+    : '<div class="hint">食物库还是空的，先加一条试试</div>';
+  const shopOpts = '<option value="">（不指定店）</option>' + lib.shops.map(sh => `<option value="${sh.id}">${esc(sh.name)}</option>`).join('');
+  openSheet(`
+    <h3>🍱 食物库 · 管理</h3>
+    <div class="hint" style="margin-bottom:10px;">约饭券使用时会从这里挑，只显示符合该券风险上限的白名单食物。</div>
+    <div style="max-height:34vh;overflow-y:auto;margin-bottom:12px;">${rows}</div>
+    <div style="border-top:1px solid var(--line);padding-top:12px;">
+      <label class="fl">食物名称</label>
+      <input class="txt" id="fdName" placeholder="例如：番茄炒蛋">
+      <div class="row2" style="margin-top:0;">
+        <div><label class="fl">价格</label><input class="txt" type="number" step="0.01" id="fdPrice" placeholder="0.00"></div>
+        <div><label class="fl">风险等级</label>
+          <select class="txt" id="fdRisk">
+            <option value="1">1 低</option><option value="2" selected>2 中低</option>
+            <option value="3">3 中</option><option value="4">4 中高</option><option value="5">5 高</option>
+          </select>
+        </div>
+      </div>
+      <label class="fl">所属店</label>
+      <select class="txt" id="fdShop">${shopOpts}</select>
+      <label class="fl">大类（决定是否食物/是否垃圾）</label>
+      <select class="txt" id="fdCat">${state.cats.map(c => `<option value="${c.id}">${esc(c.name)}${c.isJunk ? ' · 垃圾' : ''}</option>`).join('')}</select>
+      <label class="fl">或新建一家店</label>
+      <input class="txt" id="fdShopNew" placeholder="填了就会新建，例如：老碗面">
+      <label class="fl">标签</label>
+      <div class="chips" id="fdTags">${FOOD_TAGS.map(t => `<div class="chip" data-tag="${t.id}">${t.name}</div>`).join('')}</div>
+      <label class="fl">名单</label>
+      <div class="chips" id="fdList">
+        <div class="chip on" data-list="white">白名单（可用券）</div>
+        <div class="chip" data-list="black">黑名单（禁止）</div>
+      </div>
+      <div class="close-row">
+        <button class="btn btn-g" id="fdCancel">关闭</button>
+        <button class="btn btn-p" id="fdSave">加入食物库</button>
+      </div>
+    </div>`, sheet => {
+    const selTags = new Set();
+    let listVal = 'white';
+    sheet.querySelectorAll('#fdTags .chip').forEach(ch => {
+      ch.onclick = () => {
+        const v = ch.dataset.tag;
+        if(selTags.has(v)){ selTags.delete(v); ch.classList.remove('on'); }
+        else { selTags.add(v); ch.classList.add('on'); }
+      };
+    });
+    sheet.querySelectorAll('#fdList .chip').forEach(ch => {
+      ch.onclick = () => {
+        sheet.querySelectorAll('#fdList .chip').forEach(x => x.classList.remove('on'));
+        ch.classList.add('on'); listVal = ch.dataset.list;
+      };
+    });
+    sheet.querySelector('#fdCancel').onclick = closeSheet;
+    sheet.querySelector('#fdSave').onclick = () => {
+      const ok = addFoodItem({
+        name: sheet.querySelector('#fdName').value,
+        price: sheet.querySelector('#fdPrice').value,
+        risk: sheet.querySelector('#fdRisk').value,
+        shopId: sheet.querySelector('#fdShop').value,
+        shopName: sheet.querySelector('#fdShopNew').value,
+        tags: [...selTags],
+        list: listVal,
+        catId: sheet.querySelector('#fdCat').value
+      });
+      if(ok){ closeSheet(); setTimeout(openFoodLibrary, 150); }
+    };
+  });
+}
+function openMealFoodPicker(couponId){
+  const cp = (state.coupons || []).find(c => c.id === couponId);
+  if(!cp){ toast('券不存在'); return; }
+  if(cp.status === 'used'){ toast('这张券用过了'); return; }
+  const dBlock = mealDateBlocked(cp.typeId, getDayLifeDay());
+  if(dBlock){ toast(dBlock); return; }
+  const tBlock = mealTimeBlocked(cp.typeId);
+  if(tBlock){ toast(tBlock); return; }
+  ensureFoodLib();
+  const items = getFoodsForCoupon(cp.typeId);
+  const maxRisk = MEAL_RISK_MAX[cp.typeId] || 3;
+  const rows = items.length
+    ? items.map(it => {
+        if(!it.ok){
+          return `<div class="rec" style="opacity:.4"><span class="rec-dot" style="background:#64748b"></span><div class="rec-mid"><div class="rec-name">${esc(it.f.name)}</div><div class="rec-meta"><span>¥${it.f.price}</span><span style="color:#fca5a5">${esc(it.why)}</span></div></div></div>`;
+        }
+        return `<div class="rec"><span class="rec-dot" style="background:#4ade80"></span><div class="rec-mid"><div class="rec-name">${esc(it.f.name)}</div><div class="rec-meta"><span>${esc(getShopName(it.f.shopId) || '未指定店')}</span><span>¥${it.f.price}</span><span>风险${FOOD_RISK_LABEL[it.f.risk] || it.f.risk}</span></div></div><button class="rec-edit" data-pick-food="${it.f.id}" data-pick-coupon="${cp.id}">选它</button></div>`;
+      }).join('')
+    : '<div class="hint">食物库是空的，你可以直接手动输入，或者先去「食物库 · 管理」加几条。</div>';
+  openSheet(`
+    <h3>${esc(cp.name)} · 从食物库选</h3>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px;">
+      额度 ¥${cp.cap} · 有效期至 ${cp.expire}<br>
+      本券允许风险上限：${FOOD_RISK_LABEL[maxRisk] || maxRisk}；黑名单不显示为可选。<br>${MEAL_WEEKEND_ONLY.indexOf(cp.typeId) >= 0 ? '<span style="color:#fbbf24">仅周末可用</span>' : '不限日期'}${MEAL_TIME_RULES[cp.typeId] ? ' · <span style="color:#fbbf24">' + MEAL_TIME_RULES[cp.typeId][2] + '</span>' : ''}
+    </div>
+    <div style="max-height:46vh;overflow-y:auto;">${rows}</div>
+    <div class="close-row">
+      <button class="btn btn-g" id="fpManual">手动输入</button>
+      <button class="btn btn-g" id="fpLib">管理食物库</button>
+    </div>`, sheet => {
+    sheet.querySelector('#fpManual').onclick = () => { closeSheet(); setTimeout(() => useMealForm(cp.id, null), 120); };
+    sheet.querySelector('#fpLib').onclick = () => { closeSheet(); setTimeout(openFoodLibrary, 120); };
+  });
+}
+
+/* ============================================================
+   卡片碎片（3 个碎片合成 1 张卡）
+   ============================================================ */
+const SHARD_KINDS = [
+  { id:'clean',   name:'打扫卡碎片', card:'打扫卡',   cost:1 },
+  { id:'protect', name:'保护卡碎片', card:'保护卡',   cost:2 },
+  { id:'makeup',  name:'补签卡碎片', card:'补签卡',   cost:2 }
+];
+const SHARD_NEED = 3;
+const SHARD_WEEK_LIMIT = 3;
+const SHARD_VALID_DAYS = 60;
+function ensureShards(){
+  if(!state.shards) state.shards = { clean:0, protect:0, makeup:0 };
+  if(!state.shardDates) state.shardDates = { clean:[], protect:[], makeup:[] };
+  const k = ['clean','protect','makeup'];
+  for(let i = 0; k.length > i; i++){
+    const kk = k[i];
+    if(state.shards[kk] === undefined) state.shards[kk] = 0;
+    if(!state.shardDates[kk]) state.shardDates[kk] = [];
+    while(state.shardDates[kk].length > state.shards[kk]) state.shardDates[kk].pop();
+    while(state.shards[kk] > state.shardDates[kk].length) state.shardDates[kk].push(getDayLifeDay());
+  }
+  return state.shards;
+}
+function expireShards(){
+  ensureShards();
+  const today = getDayLifeDay();
+  const k = ['clean','protect','makeup'];
+  let lost = 0;
+  for(let i = 0; k.length > i; i++){
+    const kk = k[i];
+    const keep = [];
+    for(let j = 0; state.shardDates[kk].length > j; j++){
+      const d = state.shardDates[kk][j];
+      const gap = Math.abs(diffDays(parseD(d), parseD(today)));
+      if(SHARD_VALID_DAYS >= gap) keep.push(d);
+      else lost++;
+    }
+    state.shardDates[kk] = keep;
+    state.shards[kk] = keep.length;
+  }
+  if(lost > 0){
+    logAudit('shard', '有 ' + lost + ' 个碎片超过 ' + SHARD_VALID_DAYS + ' 天已过期');
+  }
+}
+function shardExpireHint(kind){
+  ensureShards();
+  const arr = state.shardDates[kind] || [];
+  if(!arr.length) return '';
+  let oldest = arr[0];
+  for(let i = 0; arr.length > i; i++){ if(oldest > arr[i]) oldest = arr[i]; }
+  const left = SHARD_VALID_DAYS - Math.abs(diffDays(parseD(oldest), parseD(getDayLifeDay())));
+  if(0 >= left) return '即将过期';
+  if(14 >= left) return '最早 ' + left + ' 天后过期';
+  return '';
+}
+function shardBuyLeft(){
+  const ws = getWeekStart();
+  if(!state.shardWeek || state.shardWeek.weekStart !== ws) state.shardWeek = { weekStart: ws, used: 0 };
+  return SHARD_WEEK_LIMIT - state.shardWeek.used;
+}
+function buyShard(kind){
+  const def = SHARD_KINDS.find(x => x.id === kind);
+  if(!def){ toast('未知碎片'); return false; }
+  ensureShards();
+  if(0 >= shardBuyLeft()){ toast('本周碎片已换满 ' + SHARD_WEEK_LIMIT + ' 个'); return false; }
+  if(def.cost > (state.points || 0)){ toast('积分不足'); return false; }
+  pushUndo('兑换' + def.name);
+  state.points = (state.points || 0) - def.cost;
+  state.shards[kind] += 1;
+  if(!state.shardDates) state.shardDates = { clean:[], protect:[], makeup:[] };
+  state.shardDates[kind].push(getDayLifeDay());
+  state.shardWeek.used += 1;
+  logAudit('shard', '兑换 ' + def.name + '（-' + def.cost + ' 分）');
+  saveState(); render();
+  toast('获得 1 个' + def.name + '（' + state.shards[kind] + '/' + SHARD_NEED + '）');
+  return true;
+}
+function craftCard(kind){
+  const def = SHARD_KINDS.find(x => x.id === kind);
+  if(!def){ toast('未知碎片'); return false; }
+  ensureShards();
+  if(SHARD_NEED > state.shards[kind]){ toast('碎片不够（' + state.shards[kind] + '/' + SHARD_NEED + '）'); return false; }
+  pushUndo('合成' + def.card);
+  state.shards[kind] -= SHARD_NEED;
+  if(state.shardDates && state.shardDates[kind]) state.shardDates[kind] = state.shardDates[kind].slice(SHARD_NEED);
+  logAudit('shard', '用 ' + SHARD_NEED + ' 个碎片合成 ' + def.card);
+  state.cards = state.cards || {};
+  state.cards[kind] = (state.cards[kind] || 0) + 1;
+  saveState(); render();
+  toast('合成成功：' + def.card + ' +1');
+  return true;
+}
+
+/* ============================================================
+   约饭券（积分兑换）
+   ============================================================ */
+const FUNC_CARDS = [
+  { id:'clean',   name:'打扫卡',     cost:4 },
+  { id:'protect', name:'保护卡',     cost:8 },
+  { id:'makeup',  name:'补签卡',     cost:10 },
+  { id:'reset',   name:'周期重置卡', cost:12 }
+];
+function funcBuyLeft(){
+  const ws = getWeekStart();
+  if(!state.funcBuy || state.funcBuy.weekStart !== ws) state.funcBuy = { weekStart: ws, counts: {} };
+  return function(id){ return 1 - (state.funcBuy.counts[id] || 0); };
+}
+function buyFuncCard(id){
+  const def = FUNC_CARDS.find(x => x.id === id);
+  if(!def){ toast('未知卡片'); return false; }
+  const left = funcBuyLeft();
+  if(0 >= left(id)){ toast('本周已经换过这张卡了'); return false; }
+  if(def.cost > (state.points || 0)){ toast('积分不足'); return false; }
+  pushUndo('兑换' + def.name);
+  state.points = (state.points || 0) - def.cost;
+  state.cards = state.cards || {};
+  state.cards[id] = (state.cards[id] || 0) + 1;
+  state.funcBuy.counts[id] = (state.funcBuy.counts[id] || 0) + 1;
+  saveState(); render();
+  toast('已兑换 ' + def.name + '，库存 +1');
+  return true;
+}
+const MEAL_COUPONS = [
+  { id:'stir',   name:'炒菜券',     cost:5,  cap:40,  cool:10, valid:30 },
+  { id:'dine',   name:'堂食券',     cost:6,  cap:60,  cool:12, valid:30 },
+  { id:'sweet',  name:'甜品糖水券', cost:7,  cap:35,  cool:15, valid:30 },
+  { id:'grill',  name:'干锅烤肉券', cost:8,  cap:90,  cool:15, valid:45 },
+  { id:'hotpot', name:'火锅券',     cost:8,  cap:90,  cool:15, valid:45 },
+  { id:'gather', name:'通用聚餐券', cost:8,  cap:120, cool:15, valid:45 },
+  { id:'fast',   name:'快餐券',     cost:9,  cap:50,  cool:20, valid:30 },
+  { id:'buffet', name:'自助餐券',   cost:10, cap:240, cool:20, valid:45 }
+];
+const MEAL_WEEKEND_ONLY = ['grill', 'hotpot', 'gather', 'buffet'];
+function isWeekendDay(dateStr){
+  const d = parseD(dateStr || getDayLifeDay());
+  const w = d.getDay();
+  return (0 === w || 6 === w);
+}
+const MEAL_TIME_RULES = {
+  fast:   [11*60, 15*60, '午餐 11:00-15:00'],
+  sweet:  [14*60, 22*60, '下午茶 14:00-22:00'],
+  hotpot: [17*60, 23*60, '晚餐 17:00-23:00'],
+  grill:  [17*60, 23*60, '晚餐 17:00-23:00'],
+  buffet: [17*60, 23*60, '晚餐 17:00-23:00'],
+  gather: [17*60, 23*60, '晚餐 17:00-23:00']
+};
+function mealTimeBlocked(typeId){
+  const rule = MEAL_TIME_RULES[typeId];
+  if(!rule) return '';
+  const m = nowMin();
+  if(rule[0] > m || m > rule[1]) return '这张券只能在' + rule[2] + '使用';
+  return '';
+}
+function mealDateBlocked(typeId, dateStr){
+  if(0 > MEAL_WEEKEND_ONLY.indexOf(typeId)) return '';
+  if(isWeekendDay(dateStr)) return '';
+  return '这张券只能周末用（六、日）';
+}
+const MEAL_STACK_CAP = 150;
+const MEAL_BUFFET_CAP = 240;
+
+function getMealDef(id){
+  for(let i = 0; MEAL_COUPONS.length > i; i++){ if(MEAL_COUPONS[i].id === id) return MEAL_COUPONS[i]; }
+  return null;
+}
+function getActiveMealCoupons(){
+  const today = getDayLifeDay();
+  return (state.coupons || []).filter(c => c.status !== 'used' && (!c.expire || c.expire >= today));
+}
+function getLastMealExchange(typeId){
+  const log = state.couponLog || [];
+  for(let i = 0; log.length > i; i++){
+    if(log[i].typeId === typeId && log[i].act === 'exchange') return log[i].date;
+  }
+  return '';
+}
+function mealCoolRemain(typeId){
+  const def = getMealDef(typeId); if(!def) return 0;
+  const last = getLastMealExchange(typeId);
+  if(!last) return 0;
+  const gap = diffDays(parseD(last), parseD(getDayLifeDay()));
+  return gap >= def.cool ? 0 : (def.cool - gap);
+}
+function canExchangeMeal(typeId){
+  const def = getMealDef(typeId);
+  if(!def) return { ok:false, msg:'未知券' };
+  if(def.cost > (state.points || 0)) return { ok:false, msg:'积分不足（需 ' + def.cost + ' 分）' };
+  const mine = getActiveMealCoupons().filter(c => c.typeId === typeId);
+  if(mine.length >= 2) return { ok:false, msg:'同类券最多同时持有 2 张' };
+  const cool = mealCoolRemain(typeId);
+  if(cool > 0) return { ok:false, msg:'该券冷却中，还需 ' + cool + ' 天' };
+  const others = getActiveMealCoupons().filter(c => c.typeId !== 'buffet');
+  let usedCap = 0;
+  for(let i = 0; others.length > i; i++) usedCap += (others[i].cap || 0);
+  if(typeId === 'buffet'){
+    const buffetCap = getActiveMealCoupons().filter(c => c.typeId === 'buffet').reduce((a,b) => a + (b.cap||0), 0);
+    if(buffetCap + def.cap > MEAL_BUFFET_CAP) return { ok:false, msg:'自助餐券叠加超上限（' + MEAL_BUFFET_CAP + '）' };
+  } else if(usedCap + def.cap > MEAL_STACK_CAP){
+    return { ok:false, msg:'叠加额度超上限（最多 ' + MEAL_STACK_CAP + '）' };
+  }
+  return { ok:true, def:def };
+}
+function exchangeMealCoupon(typeId){
+  const r = canExchangeMeal(typeId);
+  if(!r.ok){ toast(r.msg); return false; }
+  const def = r.def;
+  const today = getDayLifeDay();
+  pushUndo('兑换' + def.name);
+  state.points = (state.points || 0) - def.cost;
+  logAudit('coupon', '兑换 ' + def.name + '（-' + def.cost + ' 分）');
+  state.coupons = state.coupons || [];
+  state.coupons.push({
+    id: nid('cp_'), typeId: def.id, name: def.name, cap: def.cap,
+    status: 'unused', createdAt: today,
+    expire: fmtDate(addDays(parseD(today), def.valid))
+  });
+  state.couponLog = state.couponLog || [];
+  state.couponLog.unshift({ id: nid('cl_'), act:'exchange', typeId: def.id, name: def.name, date: today, ts: Date.now() });
+  if(state.couponLog.length > 300){ state.couponLog.length = 300; }
+  saveState(); render();
+  toast('已兑换「' + def.name + '」· 有效期至 ' + fmtDate(addDays(parseD(today), def.valid)));
+  return true;
+}
+function submitMealCoupon(couponId, shopName, foodName, price){
+  const cp = (state.coupons || []).find(c => c.id === couponId);
+  if(!cp){ toast('券不存在'); return false; }
+  if(cp.status === 'used'){ toast('这张券已经用过了'); return false; }
+  const tB = mealTimeBlocked(cp.typeId);
+  if(tB){ toast(tB); return false; }
+  const amt = Number(price) || 0;
+  if(!shopName || !foodName){ toast('请填写店名和吃了什么'); return false; }
+  if(0 >= amt){ toast('请填写金额'); return false; }
+  const over = amt > cp.cap;
+  pushUndo('使用' + cp.name);
+  state.expenses = state.expenses || [];
+  state.expenses.push({
+    id: nid('e_'), date: getDayLifeDay(), name: shopName + ' · ' + foodName,
+    price: amt, catId: 'c_normal', isCoupon: true, couponId: cp.id, couponType: cp.typeId
+  });
+  cp.status = 'used';
+  logAudit('coupon', '使用 ' + cp.name + '（¥' + amt.toFixed(2) + '）');
+  cp.usedAt = getDayLifeDay();
+  cp.usedPrice = amt;
+  state.couponLog = state.couponLog || [];
+  state.couponLog.unshift({ id: nid('cl_'), act:'use', typeId: cp.typeId, name: cp.name, date: getDayLifeDay(), price: amt, ts: Date.now() });
+  saveState(); render();
+  toast(over ? ('已记录，超出额度 ¥' + (amt - cp.cap).toFixed(2) + ' 按普通支出算') : '券已使用，已记账');
+  return true;
+}
+function useMealForm(couponId, preset){
+  const cp = (state.coupons || []).find(c => c.id === couponId);
+  if(!cp){ toast('券不存在'); return; }
+  openSheet(`
+    <h3>使用「${esc(cp.name)}」</h3>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:6px;">
+      额度 ¥${cp.cap} · 有效期至 ${cp.expire}<br>
+      使用后会记入当天支出，并标记为券消费（不触发垃圾/饮食惩罚）。
+    </div>
+    <label class="fl">店名</label>
+    <input class="txt" id="mcShop" placeholder="例如：老碗面" value="${preset && preset.shop ? esc(preset.shop) : ''}">
+    <label class="fl">吃了什么</label>
+    <input class="txt" id="mcFood" placeholder="例如：炒菜套餐" value="${preset && preset.food ? esc(preset.food) : ''}">
+    <label class="fl">金额（额度 ¥${cp.cap}）</label>
+    <input class="txt" type="number" step="0.01" id="mcPrice" placeholder="0.00" value="${preset && preset.price ? preset.price : ''}">
+    <div class="close-row">
+      <button class="btn btn-g" id="mcCancel">取消</button>
+      <button class="btn btn-p" id="mcOk">确认使用</button>
+    </div>`, sheet => {
+    sheet.querySelector('#mcCancel').onclick = closeSheet;
+    sheet.querySelector('#mcOk').onclick = () => {
+      const shop = sheet.querySelector('#mcShop').value.trim();
+      const food = sheet.querySelector('#mcFood').value.trim();
+      const price = sheet.querySelector('#mcPrice').value;
+      if(submitMealCoupon(cp.id, shop, food, price)) closeSheet();
+    };
+  });
+}
+
 function viewCards(){
   const defs = [
     {id:'protect', icon:'🛡️', name:'保护卡', cap:2},
@@ -2215,8 +3482,8 @@ function viewCards(){
   <div class="card"><div class="card-t"><h3>我的卡包</h3><span class="sub">点击使用</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
       ${defs.map(c => {
-        const n = state.cards[c.id] || 0;
-        let disabled = n <= 0;
+                const n = state.cards[c.id] || 0;
+        let disabled = 0 >= n;
         if(c.id === 'birthday'){ if(state.birthdayCard.used) disabled = true; else if(!canBd) disabled = true; }
         return `<div style="background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 6px;text-align:center;cursor:pointer;${disabled?'opacity:.3;pointer-events:none':''}" data-card="${c.id}">
           <div style="font-size:22px;margin-bottom:4px">${c.icon}</div>
@@ -2226,12 +3493,64 @@ function viewCards(){
       }).join('')}
     </div>
   </div>
+  ${(() => {
+    const act = getActiveMealCoupons();
+    const pts = state.points || 0;
+    const listHtml = act.length
+      ? act.map(c => `<div class="rec"><div class="rec-mid"><div class="rec-name">${esc(c.name)}</div><div class="rec-meta"><span>额度 ¥${c.cap}</span><span>至 ${c.expire}</span><span>${c.createdAt} 兑换</span></div></div><button class="task-btn" data-meal-use="${c.id}">去使用</button></div>`).join('')
+      : '<div class="hint">还没有约饭券，先去下面用积分兑换</div>';
+    const exHtml = MEAL_COUPONS.map(d => {
+      const chk = canExchangeMeal(d.id);
+      const disabled = chk.ok ? '' : 'opacity:.4;pointer-events:none;';
+      return `<div class="rec" style="${disabled}"><span class="rec-dot" style="background:#fbbf24"></span><div class="rec-mid"><div class="rec-name">${d.name}</div><div class="rec-meta"><span>${d.cost} 分</span><span>额度 ¥${d.cap}</span><span>风险上限 ${FOOD_RISK_LABEL[MEAL_RISK_MAX[d.id]] || '中'}</span>${MEAL_WEEKEND_ONLY.indexOf(d.id) >= 0 ? '<span style="color:#fbbf24">仅周末</span>' : ''}${MEAL_TIME_RULES[d.id] ? '<span style="color:#fbbf24">' + MEAL_TIME_RULES[d.id][2] + '</span>' : ''}<span>冷却 ${d.cool} 天</span><span>有效 ${d.valid} 天</span>${chk.ok?'':'<span style="color:#fca5a5">'+esc(chk.msg)+'</span>'}</div></div><button class="rec-edit" data-meal-ex="${d.id}" ${chk.ok?'':'disabled'}>兑换</button></div>`;
+    }).join('');
+    return `
+    <div class="card"><div class="card-t"><h3>🍜 我的约饭券</h3><span class="sub">${act.length} 张可用</span></div>
+      ${listHtml}
+    </div>
+    <div class="card"><div class="card-t"><h3>积分兑换 · 约饭券</h3><span class="sub" style="color:var(--gold)">${pts} 分</span></div>
+      <div class="hint" style="margin-bottom:8px;">每类最多同时持有 2 张；非自助券总叠加额度 ¥${MEAL_STACK_CAP}，自助餐 ¥${MEAL_BUFFET_CAP}；同类兑换有冷却。</div>
+      ${exHtml}
+    </div>`;
+  })()}
+  ${(() => {
+    const funcs = [
+      { id:'clean',   name:'打扫卡',  icon:'🧹', cost:4 },
+      { id:'protect', name:'保护卡',  icon:'🛡️', cost:8 },
+      { id:'makeup',  name:'补签卡',  icon:'✒️', cost:10 },
+      { id:'reset',   name:'周期重置卡', icon:'🔄', cost:12 }
+    ];
+    const left = funcBuyLeft();
+    return `<div class="card"><div class="card-t"><h3>积分兑换 · 功能卡</h3><span class="sub" style="color:var(--gold)">${state.points || 0} 分</span></div>
+      <div class="hint" style="margin-bottom:8px;">每张卡每周限换 1 张（本周重置后刷新）。</div>
+      ${funcs.map(f => {
+        const cnt = left(f.id);
+        const can = cnt > 0 && (state.points || 0) >= f.cost;
+        const msg = 0 >= cnt ? '本周已换' : (f.cost > (state.points || 0) ? '积分不足' : '');
+        return `<div class="rec" style="${can?'':'opacity:.45;'}"><span style="font-size:18px">${f.icon}</span><div class="rec-mid"><div class="rec-name">${f.name}</div><div class="rec-meta"><span>${f.cost} 分</span><span>库存 ${state.cards[f.id] || 0}</span>${msg?'<span style="color:#fca5a5">'+msg+'</span>':''}</div></div><button class="rec-edit" data-buy-func="${f.id}">兑换</button></div>`;
+      }).join('')}
+    </div>`;
+  })()}
+  ${(() => {
+    const lib = ensureFoodLib();
+    ensureShards();
+    const rows = lib.foods.slice(0, 6).map(f => `<div class="rec"><span class="rec-dot" style="background:${f.list === 'black' ? '#f87171' : '#4ade80'}"></span><div class="rec-mid"><div class="rec-name">${esc(f.name)}</div><div class="rec-meta"><span>${esc(getShopName(f.shopId) || '未指定店')}</span><span>¥${f.price}</span><span>风险${FOOD_RISK_LABEL[f.risk] || f.risk}</span></div></div></div>`).join('');
+    return `<div class="card"><div class="card-t"><h3>🍱 食物库</h3><span class="sub">${lib.foods.length} 条</span></div>
+      <div class="hint" style="margin-bottom:8px;">约饭券使用时会从这里挑；只显示符合该券风险上限的白名单食物，黑名单不可选。</div>
+      ${rows || '<div class="hint">还是空的</div>'}
+      <button class="btn btn-p btn-sm" style="width:100%;margin-top:8px" data-open-foodlib="1">管理食物库 / 添加食物</button>
+    </div>
+    <div class="card"><div class="card-t"><h3>🧩 卡片碎片</h3><span class="sub">本周还可换 ${shardBuyLeft()}/${SHARD_WEEK_LIMIT}</span></div>
+      ${SHARD_KINDS.map(d => `<div class="rec"><span class="rec-dot" style="background:#a78bfa"></span><div class="rec-mid"><div class="rec-name">${d.name}</div><div class="rec-meta"><span>${state.shards[d.id] || 0}/${SHARD_NEED} 个</span><span>${d.cost} 分/个</span>${shardExpireHint(d.id) ? '<span style="color:#fca5a5">' + shardExpireHint(d.id) + '</span>' : ''}</div></div><button class="rec-edit" data-shard-buy="${d.id}">换</button><button class="rec-edit" style="border-color:rgba(167,139,250,.4);color:#c4b5fd;background:rgba(167,139,250,.1)" data-shard-craft="${d.id}">合成卡</button></div>`).join('')}
+      <div class="hint" style="margin-top:8px;">3 个碎片合成 1 张对应的卡，合成后直接进卡包库存。</div>
+    </div>`;
+  })()}
   <div class="card"><div class="card-t"><h3>说明</h3></div>
     <div style="font-size:12px;color:var(--muted);line-height:1.8;">
       <p style="margin-bottom:10px"><b style="color:var(--accent)">🛡️ 保护卡（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>抵消一次特殊情况，当天不进冷静期，不计入积累。</p>
       <p style="margin-bottom:10px"><b style="color:var(--accent)">🤒 病假卡（1 张）</b><br>冷却：7 天 · 条件：生病当天<br>豁免一天全部打卡，不计入积累。</p>
       <p style="margin-bottom:10px"><b style="color:var(--accent)">✒️ 补签卡（2 张）</b><br>冷却：7 天 · 条件：最近 3 天内<br>补签遗漏的一天，计入有效积累。</p>
-      <p style="margin-bottom:10px"><b style="color:var(--accent)">🧹 打扫卡（1 张）</b><br>冷却：7 天 · 条件：任意一天<br>学习档位减 1h15min。</p>
+      <p style="margin-bottom:10px"><b style="color:var(--accent)">🧹 打扫卡（1 张）</b><br>冷却：7 天 · 条件：任意一天<br>学习等效时长 +1h。</p>
       <p style="margin-bottom:10px"><b style="color:var(--accent)">🎂 生日卡（1 张）</b><br>条件：生日前后 10 天内<br>全天打卡全部豁免，触发庆祝特效。</p>
       <p style="margin-bottom:10px"><b style="color:var(--accent)">🔄 周期重置（2 张）</b><br>冷却：7 天 · 条件：任意一天<br>清空当前冷静期，从新周期开始。</p>
     </div>
@@ -2242,7 +3561,7 @@ function viewCards(){
    我的页
    ============================================================ */
 function viewMe(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const editsThisMonth = state.editLog.filter(e => e.date.slice(0,7) === today.slice(0,7)).length;
   const startD = state.settings.startDate;
   const daysSince = startD ? diffDays(parseD(startD), parseD(today)) : 0;
@@ -2250,7 +3569,30 @@ function viewMe(){
   const todayInfo = sch[today] || {};
   const canSmall = todayInfo.isReward === true;
   const canBig = todayInfo.isRest === true;
+  const pts = state.points || 0;
+  const ws = getWeekStart();
+  const wEarned = (state.weeklyPoints && state.weeklyPoints.weekStart === ws) ? state.weeklyPoints.earned : 0;
+  const wCap = state.weeklyPointsCap || 10;
+  const ledger = (state.pointsLedger || []).slice(0, 10);
+  const ledgerHtml = ledger.length
+    ? ledger.map(it => `<div class="rec"><span class="rec-dot" style="background:#4ade80"></span><div class="rec-mid"><div class="rec-name">${esc(it.source)}</div><div class="rec-meta"><span>${it.date} ${it.time}</span>${it.note ? '<span>· ' + esc(it.note) + '</span>' : ''}</div></div><span class="rec-amt">+${it.amount}</span></div>`).join('')
+    : '<div class="hint">还没有积分记录</div>';
   return `
+  <div class="card"><div class="card-t"><h3>🧾 审计日志</h3><span class="sub">最近 ${(state.auditLog || []).length} 条</span></div>
+    ${(() => {
+      const logs = (state.auditLog || []).slice(0, 30);
+      if(!logs.length) return '<div class="hint">还没有记录</div>';
+      const colorMap = { points:'#fbbf24', card:'#60a5fa', coupon:'#f472b6', shard:'#a78bfa', settle:'#4ade80', other:'#94a3b8' };
+      return logs.map(l => `<div class="rec"><span class="rec-dot" style="background:${colorMap[l.type] || colorMap.other}"></span><div class="rec-mid"><div class="rec-name" style="font-size:12px">${esc(l.text)}</div><div class="rec-meta"><span>${l.date} ${l.time}</span><span>${l.type}</span></div></div></div>`).join('');
+    })()}
+  </div>
+  <div class="card"><div class="card-t"><h3>🌟 积分账本</h3><span class="sub">本周 ${wEarned}/${wCap}</span></div>
+    <div class="hint" style="margin-bottom:8px;">${esc(getPointsExpireHint() || '暂无即将过期的积分')}</div>
+    <div style="font-size:32px;font-weight:800;color:var(--gold);letter-spacing:-1px;margin:6px 0 2px;font-variant-numeric:tabular-nums;">${pts}</div>
+    <div class="hint" style="margin-bottom:10px;">可用积分 · 每周最多获得 ${wCap} 分，超出作废</div>
+    <div class="card-t" style="margin-top:10px;"><h3 style="font-size:12px;">最近记录</h3></div>
+    ${ledgerHtml}
+  </div>
   <div class="card"><div class="card-t"><h3>系统状态</h3></div>
     <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--muted);">起始日期</span><span style="color:var(--accent);font-weight:600;">${startD}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--muted);">已运行</span><span style="color:var(--accent);font-weight:600;">${daysSince} 天</span></div>
@@ -2332,21 +3674,31 @@ function showViolationDialog(itemName, isJunk, catId, tagId, price){
     <textarea class="txt" id="violNote" placeholder="写点什么..."></textarea>
     <div class="close-row" style="flex-direction:column;">
       <button class="btn btn-g" style="border-color:#fbbf24;color:#fde68a;" id="violEmergency">🆘 紧急例外（低血糖/生病）</button>
+      <button class="btn btn-g" style="border-color:#60a5fa;color:#93c5fd;" id="violBackfill">⏪ 其实是 19:00 前吃的（补录）</button>
       <button class="btn btn-g" style="color:#fca5a5;" id="violConfirm">我知道，继续记录</button>
       <button class="btn btn-g" id="violCancel">取消记录</button>
     </div>
   `, sheet => {
     const noteEl = sheet.querySelector('#violNote');
-    sheet.querySelector('#violEmergency').onclick = () => {
-      state.violations.push({ id:nid('v_'), date:todayStr(), time:nowTimeStr(), itemName, isJunk, isEmergency:true, note:noteEl.value.trim(), ts:Date.now() });
-      state.expenses.push({ id:nid('e_'), date:todayStr(), tagId:tagId||null, name:itemName, price:price||0, catId });
+        sheet.querySelector('#violEmergency').onclick = () => {
+      state.violations.push({ id:nid('v_'), date:getDayLifeDay(), time:nowTimeStr(), itemName, isJunk, isEmergency:true, note:noteEl.value.trim(), ts:Date.now() });
+      state.expenses.push({ id:nid('e_'), date:getDayLifeDay(), tagId:tagId||null, name:itemName, price:price||0, catId });
       saveState(); closeSheet(); toast('已记为紧急例外，连续保留'); render();
     };
+    sheet.querySelector('#violBackfill').onclick = () => {
+      state.expenses.push({
+        id:nid('e_'), date:getDayLifeDay(), tagId:tagId||null,
+        name:itemName, price:price||0, catId, backfill:true,
+        note:'补录：19:00 前吃的'
+      });
+      logAudit('diet', '补录（19:00 前）：' + itemName);
+      saveState(); closeSheet(); toast('已按补录记录，不计违规'); render();
+    };
     sheet.querySelector('#violConfirm').onclick = () => {
-      state.violations.push({ id:nid('v_'), date:todayStr(), time:nowTimeStr(), itemName, isJunk, isEmergency:false, note:noteEl.value.trim(), ts:Date.now() });
-      state.expenses.push({ id:nid('e_'), date:todayStr(), tagId:tagId||null, name:itemName, price:price||0, catId });
+      state.violations.push({ id:nid('v_'), date:getDayLifeDay(), time:nowTimeStr(), itemName, isJunk, isEmergency:false, note:noteEl.value.trim(), ts:Date.now() });
+      state.expenses.push({ id:nid('e_'), date:getDayLifeDay(), tagId:tagId||null, name:itemName, price:price||0, catId });
       state.resistStreak.current = 0;
-      state.resistStreak.breakReason = `19:00 后进食（${todayStr()}）`;
+      state.resistStreak.breakReason = `19:00 后进食（${getDayLifeDay()}）`;
       saveState(); closeSheet(); toast('已记录 · 连续归零'); render();
     };
     sheet.querySelector('#violCancel').onclick = () => { closeSheet(); };
@@ -2434,7 +3786,7 @@ function showActionDialog(type){
    核对弹窗
    ============================================================ */
 function showConfirmSheet(){
-  const today = todayStr();
+  const today = getDayLifeDay();
   const rec = state.records[today] || {};
   const sch = computeSchedule();
   const info = sch[today] || {};
@@ -2470,7 +3822,7 @@ function showConfirmSheet(){
    打卡逻辑
    ============================================================ */
 function doCheckin(project){
-  const today = todayStr();
+  const today = project === 'sleep' ? getSleepLifeDay() : getDayLifeDay();
   const rec = getRecord(today);
   const info = computeSchedule()[today] || {};
   const isReward = info.isReward;
@@ -2485,8 +3837,8 @@ function doCheckin(project){
     if(project === 'sleep') rec.sleep = { time:nowTimeStr(), success:true, msg:'休息日记录', checked:true, restDay:true };
     else if(project === 'wake') rec.wake = { time:nowTimeStr(), fitness:true, msg:'休息日记录', checked:true, restDay:true };
     else if(project === 'study'){
-      const h = parseFloat($('#in_study') && $('#in_study').value);
-      if(!h || h <= 0){ toast('请输入小时数'); return; }
+            const h = parseFloat($('#in_study') && $('#in_study').value);
+      if(!h || 0 >= h){ toast('请输入小时数'); return; }
       rec.study = { hours:h, tier:'rest', label:'休息日记录', checked:true, restDay:true };
     }
     else if(project === 'fitness') rec.fitness = { checked:true, time:nowTimeStr(), restDay:true };
@@ -2545,22 +3897,26 @@ function doCheckin(project){
   }
 
   if(project === 'fitness'){
-    if(!rec.wake || !rec.wake.fitness){ toast('起床未达标，无法健身打卡'); return; }
-    rec.fitness = { checked:true, time:nowTimeStr() };
-    saveState(); render(); toast('健身打卡成功 ✓');
+    if(!rec.wake || !rec.wake.checked){ toast('请先打卡起床'); return; }
+    const ft = fitTierOf(rec.wake.time);
+    if(!ft.ok){ toast(ft.label); return; }
+    rec.fitness = { checked:true, time:nowTimeStr(), minutes: ft.min, label: ft.label, tier: ft.tier };
+    logAudit('card', '健身完成 ' + ft.label + '（起床 ' + rec.wake.time + '）');
+    saveState(); render(); toast('健身完成 ' + ft.label + ' ✓');
     return;
   }
 
-  if(project === 'study'){
+    if(project === 'study'){
     const h = parseFloat($('#in_study') && $('#in_study').value);
-    if(!h || h <= 0){ toast('请输入学习小时数'); return; }
-    const j = judgeStudy(h, isReward);
-    rec.study = { hours:h, tier:j.tier, label:j.label, msg:j.msg, checked:true };
+    if(!h || 0 >= h){ toast('请输入学习小时数'); return; }
+    const cleanActive = state.cardEffects && state.cardEffects.cleanDate === today;
+    const j = judgeStudy(h, isReward, cleanActive);
+    rec.study = { hours:h, eff: (h + (cleanActive?1:0)), tier:j.tier, label:j.label, msg:j.msg, isGreen:j.isGreen, checked:true };
     saveState(); render();
     if(j.tier.startsWith('cool')){
       toast('学习未达标 · ' + j.msg);
-    } else if(j.tier === 'conservative'){
-      toast('保守打卡，不计入积累');
+    } else if(j.tier === 'recovery'){
+      toast('恢复日，不计入全绿');
     } else {
       toast('学习打卡成功 ✓');
     }
@@ -2579,6 +3935,9 @@ function doCheckin(project){
         state.jj.lastReleaseDate = today;
         state.jj.cycleLength += state.settings.jjIncrement;
         state.jj.current = 0;
+        state.jjBank = (state.jjBank || 0) + 1;
+        logAudit('points', '养精蓄锐完成 1 个周期，累积 +1（共 ' + state.jjBank + '）');
+        toast('养精蓄锐周期完成！已累积 ' + state.jjBank + ' 个');
       }
     } else { state.jj.current = 0; }
     saveState(); render();
@@ -2593,7 +3952,7 @@ function doCheckin(project){
 function downloadReport(type){
   const isSmall = type === 'small';
   const days = isSmall ? 7 : 31;
-  const today = todayStr();
+  const today = getDayLifeDay();
   const endDate = today;
   const startDate = fmtDate(addDays(parseD(today), -(days - 1)));
   const sch = computeSchedule();
@@ -2610,7 +3969,7 @@ function downloadReport(type){
     let score = 0;
     if(rec.sleep && rec.sleep.success) score++;
     if(rec.wake && rec.wake.fitness) score++;
-    if(rec.study && (rec.study.tier === 'normal' || rec.study.tier === 'reward')) score++;
+    if(rec.study && (rec.study.isGreen === true || rec.study.tier === 'normal' || rec.study.tier === 'reward')) score++;
     if(dayExp.length > 0 && isMoneyOk(k)) score++;
     if(dayExp.length > 0 && isDietOk(k)) score++;
     if((rec.jingji && rec.jingji.checked && rec.jingji.ok === true) || info.isJJRelease) score++;
@@ -2622,7 +3981,7 @@ function downloadReport(type){
       violations: dayViolations, expenseCount: dayExp.length
     });
   }
-  const actionsInRange = state.actions.filter(a => a.date >= startDate && a.date <= endDate);
+  const actionsInRange = state.actions.filter(a => a.date >= startDate && endDate >= a.date);
   const resistActions = actionsInRange.filter(a => a.type === 'resist');
   const restartActions = actionsInRange.filter(a => a.type === 'restart');
   const resistOK = resistActions.filter(a => a.result === 'success').length;
@@ -2641,7 +4000,7 @@ function downloadReport(type){
   const totalSpent = dayList.reduce((a,b) => a + b.spent, 0);
   const totalFood = dayList.reduce((a,b) => a + b.foodCount, 0);
   const totalJunk = dayList.reduce((a,b) => a + b.junkCount, 0);
-  const totalViolations = dayList.reduce((a,b) => a + b.violations.length, 0);
+  const totalViolations = dayList.reduce((a,b) => a + b.violations.filter(v => !v.isEmergency).length, 0);
   const greenDays = dayList.filter(d => d.score >= 5).length;
   const perfectDays = dayList.filter(d => d.score === 6).length;
   const title = isSmall ? '小周期报告' : '大周期报告';
@@ -2681,6 +4040,12 @@ td.ok{color:#86efac}
 .action-item .tag{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:5px;background:rgba(167,139,250,.15);color:#c4b5fd;margin-right:4px}
 .action-item .tag.src{background:rgba(96,165,250,.15);color:#93c5fd}
 .footer{text-align:center;color:#4d7a5c;font-size:11px;margin-top:20px}
+.printbar{position:fixed;right:16px;bottom:16px;z-index:99}
+.printbar button{background:#22c55e;color:#062;border:none;border-radius:12px;padding:12px 18px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,.35)}
+@media print{.printbar{display:none}body{background:#fff;color:#111}
+.card{background:#fff;border:1px solid #ddd}.card h2{color:#166534}
+.cell{background:#f3f4f6}.cell .val{color:#166534}.heat-cell{color:#333}
+table th{color:#555}td{color:#111}.sub,.footer{color:#666}}
 .cheer{text-align:center;padding:20px;color:#fbbf24;font-weight:700}
 </style></head><body>
 <div class="wrap">
@@ -2716,7 +4081,7 @@ ${dayList.map(d => `<tr>
 <td class="num">¥${d.spent.toFixed(0)}</td>
 <td class="num">${d.foodCount}</td>
 <td class="num ${d.junkCount>0?'bad':''}">${d.junkCount>0?d.junkCount:'—'}</td>
-<td class="num ${d.score>=5?'ok':(d.score<=2?'bad':'')}">${d.score}/6</td>
+<td class="num ${d.score>=5?'ok':(2 >= d.score?'bad':'')}">${d.score}/6</td>
 </tr>`).join('')}
 </tbody></table></div>
 <div class="card"><h2>💪 意志力表现</h2>
@@ -2747,10 +4112,62 @@ ${srcList.map(([name, cnt]) => `<div class="bar-row"><span class="bar-name">${es
 <div class="cell"><div class="lbl">平均每日</div><div class="val" style="color:#8fb0ff">¥${(totalSpent/days).toFixed(0)}</div></div>
 </div></div>
 ${totalViolations > 0 ? `<div class="card"><h2>⚠️ 19:00 后违规记录</h2>
-${state.violations.filter(v => v.date >= startDate && v.date <= endDate).map(v => `<div class="action-item fail"><div class="head"><span>${v.date} ${v.time}</span><span>${v.isEmergency?'紧急例外':'违规'}</span></div><div>${esc(v.itemName)}</div>${v.note ? `<div style="color:#7fa88a;font-size:11.5px">${esc(v.note)}</div>` : ''}</div>`).join('')}
+${state.violations.filter(v => v.date >= startDate && endDate >= v.date && !v.isEmergency).map(v => `<div class="action-item fail"><div class="head"><span>${v.date} ${v.time}</span><span>${v.isEmergency?'紧急例外':'违规'}</span></div><div>${esc(v.itemName)}</div>${v.note ? `<div style="color:#7fa88a;font-size:11.5px">${esc(v.note)}</div>` : ''}</div>`).join('')}
 </div>` : ''}
+${(() => {
+  const ws = getWeekStart();
+  const ledger = (state.pointsLedger || []).filter(it => it.date >= ws).slice(0, 12);
+  const ptsIn = ledger.filter(it => it.amount > 0).reduce((a,b) => a + b.amount, 0);
+  const ptsOut = ledger.filter(it => 0 > it.amount).reduce((a,b) => a + Math.abs(b.amount), 0);
+  const couponLogs = (state.couponLog || []).slice(0, 12);
+  const cdRows = [];
+  dayList.forEach(d => {
+    if(d.info && d.info.cooldownBreakdown){
+      d.info.cooldownBreakdown.forEach(b => cdRows.push({ date: d.date, name: b.name, days: b.days }));
+    }
+  });
+  return `<div class="card"><h2>🌟 积分（本周）</h2>
+    <div class="grid">
+      <div class="cell"><div class="lbl">本周获得</div><div class="val">${ptsIn}</div></div>
+      <div class="cell"><div class="lbl">本周消耗</div><div class="val" style="color:#fca5a5">${ptsOut}</div></div>
+      <div class="cell"><div class="lbl">当前余额</div><div class="val" style="color:#fbbf24">${state.points || 0}</div></div>
+    </div>
+    ${ledger.length ? '<div style="margin-top:10px;">' + ledger.map(it => `<div class="action-item"><div class="head"><span>${it.date} ${it.time || ''}</span><span>${it.source}</span></div><div>${esc(it.note || it.source)} · ${it.amount > 0 ? '+' : ''}${it.amount} 分</div></div>`).join('') + '</div>' : ''}
+  </div>
+  <div class="card"><h2>🍜 券记录</h2>
+    ${couponLogs.length ? couponLogs.map(l => `<div class="action-item"><div class="head"><span>${l.date}</span><span>${l.act === 'exchange' ? '兑换' : '使用'}</span></div><div>${esc(l.name)}${l.price ? ' · ¥' + l.price : ''}</div></div>`).join('') : '<div style="color:#7fa88a;font-size:12.5px">本周期没有券记录</div>'}
+  </div>
+  <div class="card"><h2>❄ 冷静期生成明细</h2>
+    ${cdRows.length ? `<table><thead><tr><th>来源日</th><th>原因</th><th class="num">天数</th></tr></thead><tbody>${cdRows.map(r => `<tr><td>${r.date}</td><td>${esc(r.name)}</td><td class="num">+${r.days}</td></tr>`).join('')}</tbody></table>` : '<div style="color:#7fa88a;font-size:12.5px">本周期没有生成冷静期</div>'}
+  </div>`;
+})()}
+<div class="card"><h2>🏅 成就与累积</h2>
+${(() => {
+  const srcMap = {};
+  (state.pointsLedger || []).forEach(it => {
+    if(it.date >= startDate && endDate >= it.date && it.amount > 0){
+      srcMap[it.source] = (srcMap[it.source] || 0) + it.amount;
+    }
+  });
+  const srcRows = Object.keys(srcMap).map(k => ({ k: k, v: srcMap[k] })).sort((a,b) => b.v - a.v);
+  const nameMap = { 'full-green':'全绿', 'green-streak-7':'连续全绿7天', 'green-streak-14':'连续全绿14天', 'green-streak-30':'连续全绿30天',
+    'tier-node':'意志力节点', 'milestone':'累计里程碑', 'quiet-night':'无宵夜', 'healthy-dinner':'健康晚餐',
+    'jingji-release':'养精蓄锐释放', 'resist':'意志力抵抗', 'restart':'重新启动', 'legacy-card':'旧奖励卡折算' };
+  const msAwarded = Object.keys(state._msAwarded || {}).length;
+  const jjDone = (state.jj && state.jj.completed) || 0;
+  const jjBank = state.jjBank || 0;
+  return `<div class="grid">
+    <div class="cell"><div class="lbl">本周期积分来源</div><div class="val">${srcRows.length}</div></div>
+    <div class="cell"><div class="lbl">已达成里程碑</div><div class="val">${msAwarded}</div></div>
+    <div class="cell"><div class="lbl">养精完成周期</div><div class="val">${jjDone}</div></div>
+    <div class="cell"><div class="lbl">待释放累积</div><div class="val">${jjBank}</div></div>
+  </div>
+  ${srcRows.length ? `<div style="margin-top:12px;">${srcRows.map(r => `<div class="bar-row"><span class="bar-name">${esc(nameMap[r.k] || r.k)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, r.v * 20)}%"></div></div><span class="bar-cnt">${r.v}</span></div>`).join('')}</div>` : ''}`;
+})()}
+</div>
 <div class="cheer">${perfectDays >= days * 0.7 ? '🎉 太棒了！继续保持！' : perfectDays >= days * 0.4 ? '💪 稳中有进，继续加油！' : '🌱 跌倒了也要爬起来，记录本身就是进步'}</div>
 <div class="footer">由 自律花园 生成 · ${new Date().toLocaleString('zh-CN')}</div>
+<div class="printbar"><button onclick="window.print()">🖨 打印 / 另存为 PDF</button></div>
 </div></body></html>`;
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -2773,14 +4190,15 @@ document.addEventListener('click', e => {
 
   if(e.target.closest('#undoBtn')){ doUndo(); return; }
 
-  const el = e.target.closest('[data-act],[data-date],[data-checkin],[data-reset],[data-add-tag],[data-jj-set],[data-sleep-reason],[data-card],[data-rm-tag],[data-edit-tag],[data-rm-cat],[data-edit-cat],[data-rm-pending],[data-rm-expense],[data-future]');
+  const el = e.target.closest('[data-act],[data-date],[data-checkin],[data-reset],[data-add-tag],[data-jj-set],[data-sleep-reason],[data-card],[data-rm-tag],[data-edit-tag],[data-rm-cat],[data-edit-cat],[data-rm-pending],[data-rm-expense],[data-future],[data-mcat],[data-dinner-toggle]');
   if(!el) return;
 
   if(el.dataset.future !== undefined){ toast('不能查看未来的日期'); return; }
+  if(el.dataset.mcat !== undefined){ moneyCat = el.dataset.mcat; render(); return; }
 
   if(el.dataset.rmPending !== undefined){
-    e.stopPropagation();
-    const r = getRecord(todayStr());
+       e.stopPropagation();
+    const r = getRecord(getDayLifeDay());
     if(r._moneyPending) r._moneyPending = r._moneyPending.filter(p => p.id !== el.dataset.rmPending);
     saveState(); render(); return;
   }
@@ -2892,15 +4310,25 @@ document.addEventListener('click', e => {
     return;
   }
   if(el.dataset.checkin !== undefined){ doCheckin(el.dataset.checkin); return; }
-  if(el.dataset.reset !== undefined){ const r = getRecord(todayStr()); if(r[el.dataset.reset]) delete r[el.dataset.reset]; saveState(); render(); toast('已重置'); return; }
-  if(el.dataset.jjSet !== undefined){ const r = getRecord(todayStr()); r._jjPending = el.dataset.jjSet; saveState(); render(); return; }
-  if(el.dataset.sleepReason !== undefined){ const r = getRecord(todayStr()); r.sleepReason = el.dataset.sleepReason; saveState(); render(); return; }
+    if(el.dataset.reset !== undefined){ const r = getRecord(getDayLifeDay()); if(r[el.dataset.reset]) delete r[el.dataset.reset]; saveState(); render(); toast('已重置'); return; }
+    if(el.dataset.jjSet !== undefined){ const r = getRecord(getDayLifeDay()); r._jjPending = el.dataset.jjSet; saveState(); render(); return; }
+    if(el.dataset.sleepReason !== undefined){ const r = getRecord(getDayLifeDay()); r.sleepReason = el.dataset.sleepReason; saveState(); render(); return; }
   if(el.dataset.card !== undefined){ useCard(el.dataset.card); return; }
 
   const act = el.dataset.act; if(!act) return;
 
+  if(act === 'toggle-tags'){ moneyShowTags = !moneyShowTags; render(); return; }
+  if(act === 'toggle-manage'){ showManage = !showManage; render(); return; }
+  if(act === 'release-jj'){ releaseJjBank(); return; }
+  if(act === 'fitness-skip'){
+    const rr = getRecord(getDayLifeDay());
+    rr.fitness = { checked:true, skip:true, minutes:0, time:nowTimeStr() };
+    logAudit('card', '今天不健身（主动跳过）');
+    saveState(); render(); toast('已记录：今天不健身');
+    return;
+  }
   if(act === 'goRecord'){ activeTab='record'; scrollPos=0; render(false); window.scrollTo(0,0); return; }
-  if(act === 'calPrev'){ calCursor.m--; if(calCursor.m < 0){ calCursor.m = 11; calCursor.y--; } render(); return; }
+  if(act === 'calPrev'){ calCursor.m--; if(0 > calCursor.m){ calCursor.m = 11; calCursor.y--; } render(); return; }
   if(act === 'calNext'){ calCursor.m++; if(calCursor.m > 11){ calCursor.m = 0; calCursor.y++; } render(); return; }
 
   if(act === 'openConfirm'){ showConfirmSheet(); return; }
@@ -2914,21 +4342,30 @@ document.addEventListener('click', e => {
 
   if(act === 'add-manual'){
     const amt = parseFloat($('#in_amt').value);
-    if(!amt || amt <= 0){ toast('请输入金额'); return; }
-    const r = getRecord(todayStr());
+    if(!amt || 0 >= amt){ toast('请输入金额'); return; }
+    const nameEl = $('#in_name');
+    const typedName = nameEl ? nameEl.value.trim() : '';
+    const cat = getCat(moneyCat);
+    const itemName = typedName || cat.name;
+    if(cat.isFood && nowMin() >= CUTOFF_MIN){
+      showViolationDialog(itemName, cat.isJunk, moneyCat, null, amt);
+      return;
+    }
+    const r = getRecord(getDayLifeDay());
     if(!r._moneyPending) r._moneyPending = [];
-    r._moneyPending.push({ id:nid('p'), tagId:null, name:'手动录入', price:amt, catId:'c_daily' });
+    r._moneyPending.push({ id:nid('p'), tagId:null, name:itemName, price:amt, catId:moneyCat });
     $('#in_amt').value = '';
+    if(nameEl) nameEl.value = '';
     saveState(); render(); toast('已添加 ¥' + amt);
     return;
   }
-  if(act === 'submit-money'){
-    const r = getRecord(todayStr());
+   if(act === 'submit-money'){
+    const r = getRecord(getDayLifeDay());
     const pending = r._moneyPending || [];
     if(!pending.length){ toast('请至少记一笔'); return; }
     pushUndo('提交用钱');
     pending.forEach(p => {
-      state.expenses.push({ id:nid('e'), date:todayStr(), tagId:p.tagId, name:p.name, price:p.price, catId:p.catId });
+      state.expenses.push({ id:nid('e'), date:getDayLifeDay(), tagId:p.tagId, name:p.name, price:p.price, catId:p.catId });
     });
     r._moneyPending = [];
     saveState(); render(); toast('已提交');
@@ -3001,8 +4438,8 @@ document.addEventListener('click', e => {
   }
 
   if(act === 'saveBudget'){
-    const b = parseFloat($('#inBudget').value);
-    if(!b || b <= 0){ toast('请输入有效预算'); return; }
+        const b = parseFloat($('#inBudget').value);
+    if(!b || 0 >= b){ toast('请输入有效预算'); return; }
     pushUndo('修改预算'); state.budget = b; saveState(); render(); toast('预算更新为 ¥' + b);
     return;
   }
@@ -3052,16 +4489,16 @@ document.addEventListener('click', e => {
     return;
   }
 
-  if(act === 'downloadSmallReport'){
+    if(act === 'downloadSmallReport'){
     const sch = computeSchedule();
-    const info = sch[todayStr()] || {};
+    const info = sch[getDayLifeDay()] || {};
     if(!info.isReward){ toast('小周期报告仅奖励日可下载'); return; }
     downloadReport('small');
     return;
   }
-  if(act === 'downloadBigReport'){
+   if(act === 'downloadBigReport'){
     const sch = computeSchedule();
-    const info = sch[todayStr()] || {};
+    const info = sch[getDayLifeDay()] || {};
     if(!info.isRest){ toast('大周期报告仅休息日可下载'); return; }
     downloadReport('big');
     return;
@@ -3107,35 +4544,70 @@ document.addEventListener('click', e => {
 /* ============================================================
    卡包使用
    ============================================================ */
-function useCard(id){
-  if(state.cards[id] <= 0){ toast('这张卡用完了'); return; }
-  const last = state.cards._lastUse[id];
-  const today = todayStr();
-  if(last){
-    const diff = Math.abs(diffDays(parseD(last), parseD(today)));
-    if(diff < 7 && id !== 'reset' && id !== 'birthday'){ toast('同一张卡7天内只能一次'); return; }
+document.addEventListener('click', function(e){
+  const ex = e.target.closest('[data-meal-ex]');
+  if(ex){ e.stopPropagation(); exchangeMealCoupon(ex.dataset.mealEx); return; }
+  const us = e.target.closest('[data-meal-use]');
+  if(us){ e.stopPropagation(); openMealFoodPicker(us.dataset.mealUse); return; }
+  const tc = e.target.closest('[data-tier-claim]');
+  if(tc){ e.stopPropagation(); claimTierPrize(tc.dataset.tierClaim); return; }
+  const tp = e.target.closest('[data-tier-points]');
+  if(tp){ e.stopPropagation(); convertTierPrize(tp.dataset.tierPoints); return; }
+  const bf = e.target.closest('[data-buy-func]');
+  if(bf){ e.stopPropagation(); buyFuncCard(bf.dataset.buyFunc); return; }
+  const pr = e.target.closest('[data-pick-reward]');
+  if(pr){ e.stopPropagation(); submitRewardFood(pr.dataset.rewardCard, pr.dataset.pickReward); return; }
+  const pf = e.target.closest('[data-pick-food]');
+  if(pf){
+    e.stopPropagation();
+    const foodId = pf.dataset.pickFood;
+    const cpId = pf.dataset.pickCoupon;
+    const cp = (state.coupons || []).find(c => c.id === cpId);
+    const f = ensureFoodLib().foods.find(x => x.id === foodId);
+    if(!cp || !f){ toast('数据异常'); return; }
+    closeSheet();
+    setTimeout(() => useMealForm(cpId, { shop: getShopName(f.shopId), food: f.name, price: f.price }), 120);
+    return;
   }
+  const fdel = e.target.closest('[data-food-del]');
+  if(fdel){ e.stopPropagation(); if(confirm('从食物库移出这条？')) removeFoodItem(fdel.dataset.foodDel); return; }
+  const sb = e.target.closest('[data-shard-buy]');
+  if(sb){ e.stopPropagation(); buyShard(sb.dataset.shardBuy); return; }
+  const sc = e.target.closest('[data-shard-craft]');
+  if(sc){ e.stopPropagation(); craftCard(sc.dataset.shardCraft); return; }
+  const ofl = e.target.closest('[data-open-foodlib]');
+  if(ofl){ e.stopPropagation(); openFoodLibrary(); return; }
+  const dt = e.target.closest('[data-dinner-toggle]');
+  if(dt){
+    e.stopPropagation();
+    const r = getRecord(getDayLifeDay());
+    r.dinnerOk = !r.dinnerOk;
+    saveState(); render();
+    toast(r.dinnerOk ? '已标记健康晚餐日' : '已取消健康晚餐标记');
+    return;
+  }
+});
+function useCard(id){
+  if(0 >= state.cards[id]){ toast('这张卡用完了'); return; }
+  const today = getDayLifeDay();
+  const rec = getRecord(today);
   const sch = computeSchedule();
   const info = sch[today] || {};
   if(info.isRest && id !== 'birthday'){ toast('休息日无需用卡'); return; }
+
+  // 7 天冷却（reset 和 birthday 除外）
+  if(id !== 'reset' && id !== 'birthday'){
+    const last = state.cards._lastUse && state.cards._lastUse[id];
+    if(last){
+      const diff = Math.abs(diffDays(parseD(last), parseD(today)));
+      if(7 > diff){ toast('同一张卡7天内只能一次'); return; }
+    }
+  }
+
+  // 生日卡：窗口校验 + 使用
   if(id === 'birthday'){
     if(state.birthdayCard.used){ toast('生日卡已使用'); return; }
     if(!canUseBirthdayCard(today)){ toast('生日卡只能在生日前后10天内使用'); return; }
-  }
-  const rec = getRecord(today);
-  pushUndo('使用卡包：' + id);
-
-  if(id === 'protect'){ rec.protect = true; toast('保护卡已使用'); }
-  else if(id === 'sick'){ rec.sick = true; toast('病假卡已使用'); }
-  else if(id === 'makeup'){
-    rec.jingji = { ok:true, checked:true, msg:'补签' };
-    if(!rec.study) rec.study = { hours:9, tier:'normal', checked:true, label:'正常' };
-    if(!rec.sleep) rec.sleep = { time:'23:00', success:true, checked:true, msg:'补签' };
-    if(!rec.wake) rec.wake = { time:'05:00', fitness:true, checked:true, msg:'补签' };
-    toast('补签卡已使用');
-  }
-  else if(id === 'clean'){ rec.cleanCard = true; toast('打扫卡已使用，学习减1h15min'); }
-  else if(id === 'birthday'){
     state.birthdayCard.used = true;
     state.birthdayCard.usedDate = today;
     rec.birthdayCard = true;
@@ -3143,13 +4615,100 @@ function useCard(id){
     toast('🎂 生日快乐！今天全部豁免');
     return;
   }
-  else if(id === 'reset'){ rec._cycleReset = true; toast('周期已重置'); }
 
-  state.cards[id]--;
-  state.cards._lastUse[id] = today;
+  // 保护卡 / 病假卡：标记豁免
+  if(id === 'protect'){
+    rec.protect = true;
+    toast('🛡️ 保护卡已使用，今日全部豁免且不计积累');
+  } else if(id === 'sick'){
+    rec.sick = true;
+    toast('🤒 病假卡已使用，今日全部豁免且不计积累');
+  } else if(id === 'clean'){
+    if(!state.cardEffects) state.cardEffects = {};
+    state.cardEffects.cleanDate = today;
+    if(rec.study) {
+      const res = judgeStudy(rec.study.hours, false, true);
+      rec.study.eff = rec.study.hours + 1;
+      rec.study.tier = res.tier; rec.study.label = res.label; rec.study.isGreen = res.isGreen;
+    }
+    toast('打扫卡已生效，学习等效时长+1h');
+  } else if(id === 'makeup'){
+    showMakeupDialog(id);
+    return;
+  } else if(id === 'reset'){
+    state.cooldowns = [];
+    state.displayCooldowns = [];
+    rec._cycleReset = true;
+    toast('周期重置卡已使用，冷静期已清空');
+  }
+
+    state.cards[id]--;
+  logAudit('card', '使用卡片：' + id);
+  if(!state.cards._lastUse) state.cards._lastUse = {};
+  if(id !== 'reset' && id !== 'birthday'){ state.cards._lastUse[id] = today; }
   saveState(); render();
 }
+function showMakeupDialog(cardId){
+  const yesterday = fmtDate(addDays(new Date(), -1));
+  const recY = getRecord(yesterday);
+  if(recY.makeup){
+    toast('昨日已经补签过了');
+    return;
+  }
+  const sch = computeSchedule();
+  const infoY = sch[yesterday] || {};
+  const isRewardY = infoY.isReward === true;
+    openSheet(`
+    <h3>✒️ 补签卡 · 选择要补的日期</h3>
+    <div style="font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:12px;">
+      <p>默认补昨天，也可以选更早的日期（不能选今天或未来）。</p>
+      <p style="color:#fca5a5;">注意：补签日不计入小周期积累，也不计入全绿统计。</p>
+    </div>
+    <label class="fl">补签日期</label>
+    <input class="txt" type="date" id="mkDate" value="${yesterday}" max="${yesterday}" min="${state.settings.startDate || yesterday}">
+    <label class="fl">睡觉时间（23:30前为达标）</label>
+    <input class="txt" type="time" id="mkSleep" value="${(recY.sleep && recY.sleep.time) ? recY.sleep.time : '23:30'}">
+    <label class="fl">起床时间（5:20前为达标）</label>
+    <input class="txt" type="time" id="mkWake" value="${(recY.wake && recY.wake.time) ? recY.wake.time : '05:20'}">
+    <label class="fl">学习时长（小时）</label>
+    <input class="txt" type="number" step="0.1" id="mkStudy" placeholder="例如 9" min="0.1" value="${(recY.study && recY.study.hours) ? recY.study.hours : ''}">
+    <div class="close-row"><button class="btn btn-g" id="mkCancel">取消</button><button class="btn btn-p" id="mkSave">确认补签</button></div>
+  `, sheet => {
+    sheet.querySelector('#mkCancel').onclick = closeSheet;
+    sheet.querySelector('#mkSave').onclick = () => {
+      const mkDateEl = sheet.querySelector('#mkDate');
+      const targetDate = (mkDateEl && mkDateEl.value) ? mkDateEl.value : yesterday;
+      if(targetDate > yesterday){ toast('不能补今天或未来'); return; }
+      const recT = getRecord(targetDate);
+      if(recT.makeup){ toast('这天已经补签过了'); return; }
+      const schT = computeSchedule();
+      const infoT = schT[targetDate] || {};
+      const sleepTime = sheet.querySelector('#mkSleep').value;
+      const wakeTime = sheet.querySelector('#mkWake').value;
+      const studyHours = parseFloat(sheet.querySelector('#mkStudy').value);
+      if(!sleepTime || !wakeTime || isNaN(studyHours) || 0 >= studyHours){
+        toast('请填写完整数据');
+        return;
+      }
+      pushUndo('补签昨日');
+      const sleepJ = judgeSleep(sleepTime, '', true);
+      const wakeJ = judgeWake(wakeTime, infoT.isReward ? 'reward' : 'normal');
+      const studyJ = judgeStudy(studyHours, false, false);
 
+      recT.makeup = true;
+      recT.sleep = { time: sleepTime, success: sleepJ.success, msg: sleepJ.msg, checked: true, makeup: true };
+      recT.wake = { time: wakeTime, fitness: wakeJ.fitness, msg: wakeJ.msg, checked: true, makeup: true };
+      recT.study = { hours: studyHours, eff: studyHours, tier: studyJ.tier, label: studyJ.label, msg: studyJ.msg, isGreen: studyJ.isGreen, checked: true, makeup: true };
+      logAudit('card', '补签 ' + targetDate + '（睡眠/起床/学习）');
+
+      state.cards[cardId]--;
+      if(!state.cards._lastUse) state.cards._lastUse = {};
+      state.cards._lastUse[cardId] = todayStr();
+      saveState(); closeSheet(); render();
+      toast('已补签 ' + targetDate + '，系统已判定');
+    };
+  });
+}
 /* ============================================================
    迁移
    ============================================================ */
@@ -3171,6 +4730,7 @@ function migrate(){
   if(!state.expenses) state.expenses = [];
   if(state.budget === undefined) state.budget = def.budget;
   if(!state.cards) state.cards = def.cards;
+  if(!state.cards._lastUse) state.cards._lastUse = {};
   if(!state.stats) state.stats = def.stats;
   if(!state.trees) state.trees = [];
   if(!state.birthdayCard) state.birthdayCard = def.birthdayCard;
@@ -3184,6 +4744,81 @@ function migrate(){
   if(!state.restartStreak) state.restartStreak = def.restartStreak;
   if(!state.rewardCards) state.rewardCards = [];
   if(!state.violations) state.violations = [];
+  if(!state.sleepExemptions) state.sleepExemptions = { weekStart:'', used:0 };
+  if(!state.cardEffects) state.cardEffects = {};
+  if(!state.cooldowns) state.cooldowns = [];
+  if(!state.foodLib) state.foodLib = [
+    { id: 'f1', name: '食堂套餐', price: 15, catId: 'c_normal' },
+    { id: 'f2', name: '炸鸡/快餐', price: 30, catId: 'c_junk' }
+  ];
+   if(state.points === undefined) state.points = 10;
+  if(!state.pointsLedger) state.pointsLedger = [];
+  if(state.weeklyPointsCap === undefined || state.weeklyPointsCap === 8) state.weeklyPointsCap = 10;
+  if(!state.weeklyPoints) state.weeklyPoints = { weekStart:'', earned:0 };
+  if(!state.coupons) state.coupons = [];
+  if(!state.tierPrizes) state.tierPrizes = [];
+  if(!state.funcBuy) state.funcBuy = { weekStart:'', counts:{} };
+  if(!state.auditLog) state.auditLog = [];
+  if(state.rewardCards && state.rewardCards.length){
+    let converted = 0;
+    state.rewardCards.forEach(rc => {
+      if(rc.status === 'pending'){ rc.status = 'converted'; rc.convertedAt = todayStr(); converted++; }
+    });
+    if(converted > 0){
+      state.points = (state.points || 0) + converted;
+      if(!state.pointsLedger) state.pointsLedger = [];
+      state.pointsLedger.unshift({ id: nid('pt_'), date: todayStr(), time: '00:00', amount: converted, source: 'legacy-card', note: '旧奖励卡折算（' + converted + ' 张）', ts: Date.now() });
+      logAudit('points', '旧奖励卡下线：' + converted + ' 张折算为 ' + converted + ' 积分');
+    }
+  }
+  if(state.carryPoints === undefined) state.carryPoints = 0;
+  if(state.jjBank === undefined) state.jjBank = 0;
+
+  // 阶段3：旧 study 迁移
+  // 1. conservative → recovery；补 eff / isGreen
+  Object.keys(state.records).forEach(k => {
+    const rec = state.records[k];
+    if(!rec) return;
+    if(rec.study){
+      const s = rec.study;
+      if(s.tier === 'conservative'){
+        s.tier = 'recovery';
+        s.label = '恢复日';
+      }
+      if(s.eff === undefined && s.hours !== undefined){
+        s.eff = s.hours;
+      }
+      if(s.isGreen === undefined){
+        s.isGreen = !!(s.tier === 'normal' || s.tier === 'reward');
+      }
+    }
+    // 2. 旧 cleanCard 标记重算 eff 与档位
+    if(rec.cleanCard === true && rec.study){
+      if(!state.cardEffects.cleanDate){
+        state.cardEffects.cleanDate = k;
+      }
+      const h = rec.study.hours || 0;
+      const eff = h + 1;
+      rec.study.eff = eff;
+      if(eff >= 10){ rec.study.tier = 'reward'; rec.study.isGreen = true; rec.study.label = '奖励档'; }
+      else if(eff >= 9){ rec.study.tier = 'normal'; rec.study.isGreen = true; rec.study.label = '正常档'; }
+      else if(eff >= 8){ rec.study.tier = 'recovery'; rec.study.isGreen = false; rec.study.label = '恢复日'; }
+      else if(eff >= 7){ rec.study.tier = 'cool1'; rec.study.isGreen = false; rec.study.label = '冷静1天'; }
+      else if(eff >= 6){ rec.study.tier = 'cool2'; rec.study.isGreen = false; rec.study.label = '冷静2天'; }
+      else { rec.study.tier = 'cool3'; rec.study.isGreen = false; rec.study.label = '冷静3天'; }
+    }
+  });
+
+  // 3. 旧支出回填 catId（用 tagId 反查）
+  state.expenses.forEach(e => {
+    if(!e.catId && e.tagId){
+      const tag = state.tags.find(t => t.id === e.tagId);
+      if(tag) e.catId = tag.catId;
+    }
+  });
+
+  // 4. 版本号升 21
+  state.version = 21;
 }
 
 /* ============================================================
@@ -3191,31 +4826,48 @@ function migrate(){
    ============================================================ */
 (function(){
   try {
-    const raw = localStorage.getItem(LS_STATE);
-    if(raw){ state = JSON.parse(raw); migrate(); }
-    else { state = defaultState(); }
-  } catch(e){
-    console.error('初始化出错:', e);
-    state = defaultState();
-  }
-
-  if(!state) state = defaultState();
-
-  try {
-    if(state.enabled && state.settings.startDate){
-      autoCheckWakeFail();
+    let raw = localStorage.getItem(LS_STATE);
+    if(!raw){
+      raw = localStorage.getItem(OLD_KEY);
+      if(raw){
+        const bk = 'garden_backup_pre_v21_' + new Date().toISOString().replace(/[:.]/g,'-');
+        if(!localStorage.getItem(bk)) localStorage.setItem(bk, raw);
+      }
     }
-  } catch(e){ console.error('autoCheckWakeFail', e); }
 
-  try { render(false); } catch(e){ console.error('首次渲染出错:', e); }
-
-  booted = true;
-
-  setTimeout(function(){
     try {
-      cloudPull(false).then(res => { if(res.pulled) render(false); });
-    } catch(e){ console.error('cloudPull', e); }
-  }, 300);
+      if(raw){ state = JSON.parse(raw); migrate(); }
+      else { state = defaultState(); }
+    } catch(e){
+      console.error('初始化出错:', e);
+      state = defaultState();
+    }
+
+    if(!state) state = defaultState();
+
+    try {
+      if(state.enabled && state.settings.startDate){
+        autoCheckWakeFail();
+      }
+    } catch(e){ console.error('autoCheckWakeFail', e); }
+
+    try { render(false); } catch(e){ console.error('首次渲染出错:', e); }
+
+        booted = true;
+
+    try { settleLifeDay(); } catch(e){}
+    setInterval(function(){ try { settleLifeDay(); } catch(e){} }, 60000);
+
+    setTimeout(function(){
+      try {
+        cloudPull(false).then(res => { if(res.pulled) render(false); });
+      } catch(e){ console.error('cloudPull', e); }
+    }, 300);
+  } catch(e){
+    console.error('启动出错:', e);
+    state = state || defaultState();
+    try { render(false); } catch(_){}
+  }
 })();
 </script>
 </body>
